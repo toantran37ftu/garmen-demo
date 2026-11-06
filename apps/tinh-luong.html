@@ -1,0 +1,548 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tính lương</title>
+<link rel="stylesheet" href="../shared.css">
+<style>
+.app-title{flex-wrap:wrap}
+.chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.chip{height:28px;padding:0 11px;border-radius:14px;border:1px solid var(--line);background:#fff;font-size:12px;font-weight:600;color:var(--muted)}
+.chip.on{background:var(--primary-50);border-color:#BFD7F7;color:var(--primary)}
+.chip i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px;font-style:normal}
+.pay{max-height:64vh;overflow:auto}
+table.pr{border-collapse:separate;border-spacing:0}
+table.pr th,table.pr td{padding:8px 10px;font-size:13px}
+table.pr thead th{position:sticky;top:0;z-index:2;height:34px}
+table.pr thead tr:nth-child(2) th{top:34px;cursor:help}
+table.pr th.gh{text-align:center;color:var(--ink);font-weight:700}
+table.pr .gs{box-shadow:inset 1px 0 var(--line)}
+table.pr .s1,table.pr .s2{position:sticky;background:#fff;z-index:1}
+table.pr .s1{left:0;min-width:84px;max-width:84px}
+table.pr .s2{left:84px;min-width:170px;box-shadow:inset -1px 0 var(--line)}
+table.pr thead .s1,table.pr thead .s2{z-index:3;background:#FAFAFB}
+table.pr tfoot td{position:sticky;bottom:0;border-top:1px solid var(--line)}
+table.pr tfoot .s1,table.pr tfoot .s2{z-index:2;background:#FAFAFB}
+table.pr tr.click:hover .s1,table.pr tr.click:hover .s2{background:#F9FAFB}
+.cl{display:block;font-size:10px;color:#9CA3AF;font-weight:700}
+.sub{display:grid;grid-template-columns:230px 1fr;gap:16px;align-items:start}
+.sub-nav{padding:6px;display:flex;flex-direction:column;gap:2px}
+.sub-nav button{display:flex;justify-content:space-between;gap:8px;border:0;background:none;padding:9px 12px;border-radius:8px;text-align:left;font-weight:500}
+.sub-nav button.on{background:var(--primary-50);color:var(--primary);font-weight:600}
+.sub-nav button span{color:var(--muted);font-size:12px}
+.drawer{width:min(480px,100%)}
+#sp-t .sg{position:sticky;left:0;z-index:1}
+#sp-t tr.grp td{background:#F3F7FD;font-weight:700;color:var(--ink)}
+#sp-t tr.wsub td{background:#FAFAFB;font-weight:600;font-style:italic}
+#sp-t .dc{min-width:58px;color:#374151}
+#sp-t th.dc{text-align:right}
+table.mx td,table.mx th{padding:8px 12px;font-size:13px}
+table.mx td.cell{cursor:pointer} table.mx td.cell:hover{background:var(--primary-50)}
+table.mx .tot{font-weight:700;background:#FAFAFB}
+table.dt{width:100%;border-collapse:collapse;font-size:13px}
+table.dt th{font-size:11px;color:var(--muted);text-align:right;padding:6px 4px;border-bottom:1px solid var(--line);font-weight:600}
+table.dt td{padding:6px 4px;border-bottom:1px dashed var(--line);text-align:right}
+table.dt th:first-child,table.dt td:first-child{text-align:left}
+table.dt tr.sum td{font-weight:700;border-bottom:0}
+.rows .r.sum{font-weight:700;border-bottom:0}
+.pager{display:flex;align-items:center;justify-content:flex-end;gap:6px;padding:10px 14px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
+.pager span{margin:0 6px}.pager .btn[disabled]{opacity:.4;cursor:default}
+@media (max-width:820px){.sub{grid-template-columns:1fr}.sub-nav{flex-direction:row;overflow-x:auto}.sub-nav button{white-space:nowrap}.search{min-width:0;flex:1}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="app-head">
+    <div class="app-title">
+      <span class="app-icon" style="background:#FEF4E6">💰</span>
+      <div><h1>Tính lương</h1><p id="h-sub">Kỳ lương tháng 10/2026 · Công ty May Demo</p></div>
+      <div class="actions"><button class="btn">⬇ Xuất Excel</button><button class="btn primary">✓ Chốt bảng lương</button></div>
+    </div>
+    <nav class="tabs">
+      <button class="tab on" data-v="thang">Bảng lương tháng</button>
+      <button class="tab" data-v="sp">Lương sản phẩm</button>
+      <button class="tab" data-v="mb">Mua – bán công đoạn</button>
+      <button class="tab" data-v="con">Bảng con</button>
+    </nav>
+  </header>
+
+  <div class="app-body">
+    <!-- ============ BẢNG LƯƠNG THÁNG ============ -->
+    <section class="view on" id="thang">
+      <div class="kpis" id="k-pay"></div>
+
+      <div class="card">
+        <div class="card-h" style="flex-direction:column;align-items:stretch;gap:10px">
+          <div class="toolbar">
+            <select class="field"><option>Kỳ lương 10/2026</option><option>Kỳ lương 09/2026</option><option>Kỳ lương 08/2026</option></select>
+            <select class="field" id="f-bp"></select>
+            <select class="field" id="f-st"><option value="">Tất cả trạng thái</option><option>Đã chốt</option><option>Tạm tính</option><option>Cần kiểm tra</option></select>
+            <input class="field search" id="f-q" placeholder="Tìm theo tên, mã nhân viên…">
+            <span class="grow"></span>
+            <button class="btn">⬇ Xuất Excel</button>
+          </div>
+          <div class="chips"><span class="muted" style="font-size:12px;margin-right:4px">Nhóm cột:</span><span id="chips" class="chips"></span>
+            <button class="chip" id="all">Hiện tất cả</button></div>
+        </div>
+        <div class="tbl-wrap pay"><table class="t pr" id="pay"></table></div>
+        <div class="pager" id="pay-pg"></div>
+      </div>
+      <div class="note">ⓘ Rê chuột vào tiêu đề cột để xem công thức · bấm một dòng để xem chi tiết lương từng người. Dòng Cộng tính trên toàn bộ nhân viên đang lọc, không chỉ trang đang xem.</div>
+    </section>
+
+    <!-- ============ LƯƠNG SẢN PHẨM ============ -->
+    <section class="view" id="sp">
+      <div class="toolbar">
+        <select class="field" id="sp-per"></select>
+        <select class="field" id="sp-x"><option value="">Tất cả xưởng</option><option>Xưởng 1</option><option>Xưởng 2</option></select>
+        <select class="field" id="sp-c"></select>
+        <select class="field" id="sp-m"></select>
+        <input class="field search" id="sp-q" placeholder="Tìm công nhân (tên, mã NV)…">
+        <span class="grow"></span>
+        <span class="badge b-info">Sản lượng tự lấy từ hệ thống chuyền · cập nhật 06:00</span>
+      </div>
+      <div class="card">
+        <div class="card-h"><h3>Tiền lương SP theo mã hàng × chuyền</h3><span class="muted" style="font-size:12px" id="sp-mx-d"></span><span class="r muted" style="font-size:12px">Bấm một ô để lọc bảng bên dưới</span></div>
+        <div class="tbl-wrap"><table class="t mx" id="sp-mx"></table></div>
+      </div>
+      <div class="card">
+        <div class="card-h" style="flex-wrap:wrap"><h3>Bảng lương sản phẩm theo mã hàng – chuyền</h3>
+          <span class="chips" style="margin-left:12px"><span class="muted" style="font-size:12px">Nhóm theo:</span><button class="chip on" data-g="mc">Mã hàng – Chuyền</button><button class="chip" data-g="nv">Công nhân</button></span>
+          <span class="r badge b-warn">Tạm tính · chưa chốt kỳ</span></div>
+        <div class="tbl-wrap pay"><table class="t pr" id="sp-t"></table></div>
+        <div class="pager" id="sp-pg"></div>
+      </div>
+      <div class="note">ⓘ Như file ĐG NGAY: TN trong giờ = SL ÷ (8 + giờ TC − 0,33) × 7,67 × ĐG CĐ · TN ngoài giờ = SL ÷ (8 + giờ TC − 0,33) × giờ TC × ĐG CĐ × 1,5. Tổng = trong giờ + ngoài giờ + mua bán CĐ → vào cột W, X của Bảng lương tháng.</div>
+    </section>
+
+    <!-- ============ MUA – BÁN CÔNG ĐOẠN ============ -->
+    <section class="view" id="mb">
+      <div class="kpis" id="k-mb"></div>
+      <div class="card">
+        <div class="card-h"><h3>Phiếu mua – bán công đoạn</h3><button class="r btn primary sm">＋ Lập phiếu</button></div>
+        <div class="tbl-wrap pay"><table class="t">
+          <thead><tr><th>Số phiếu</th><th>Ngày</th><th>Chuyền</th><th>Mã hàng</th><th>Công đoạn</th><th>Người bán → người mua</th><th class="right">SL</th><th class="right">Đơn giá</th><th class="right">Thành tiền</th><th>Trạng thái</th></tr></thead>
+          <tbody id="mb-t"></tbody>
+        </table></div>
+      </div>
+    </section>
+
+    <!-- ============ BẢNG CON ============ -->
+    <section class="view" id="con">
+      <div class="sub">
+        <div class="card sub-nav" id="sub-nav"></div>
+        <div class="card">
+          <div class="card-h"><div><h3 id="sub-h"></h3><div class="muted" style="font-size:12px;margin-top:2px" id="sub-d"></div></div><button class="r btn sm">⬆ Nhập Excel</button></div>
+          <div class="tbl-wrap pay"><table class="t" id="sub-t"></table></div>
+          <div class="pager" id="sub-pg"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- Chi tiết lương -->
+<aside class="drawer" id="drawer">
+  <div class="drawer-h"><span class="avatar" id="d-av"></span><div><h3 id="d-name"></h3><div class="muted" id="d-sub"></div></div><button class="x" onclick="closeD()">×</button></div>
+  <div class="drawer-b" id="d-body"></div>
+</aside>
+<div class="drawer-bg" id="dbg" onclick="closeD()"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const f = n => Math.round(n).toLocaleString("vi-VN");
+const f2 = n => n.toLocaleString("vi-VN", {maximumFractionDigits: 2});
+const GC = 208, HS = [0, 100, 108, 116, 125, 135], PCV = {A: 200000, P: 150000, X: 300000};
+
+// ===== Lịch kỳ 10/2026 =====
+const dd = d => String(d).padStart(2, "0"), dow = d => new Date(2026, 9, d).getDay(), TH = ["CN","T2","T3","T4","T5","T6","T7"];
+const DAYS = [...Array(31)].map((_, i) => i + 1).filter(dow); // bỏ Chủ nhật
+const WEEKS = DAYS.reduce((a, d) => (dow(d) === 1 || !a.length ? a.push([d]) : a[a.length - 1].push(d), a), []);
+const rnd = s => { let h = 2166136261; for (const c of s) h = Math.imul(h ^ c.charCodeAt(0), 16777619); h = Math.imul(h ^ h >>> 15, 2246822507); h = Math.imul(h ^ h >>> 13, 3266489909); return ((h ^ h >>> 16) >>> 0) / 4294967296; };
+const otH = (ch, d) => dow(d) === 6 ? .75 : rnd(ch + d) < .35 ? 1.75 : .75; // giờ TC: đến 17h = 0,75 · đến 18h = 1,75
+
+// ===== Sinh dữ liệu nhà máy theo FACTORY.md (PRNG có seed → mở lần nào cũng ra đúng bộ số này) =====
+let seed = 20261031;
+const rand = () => { seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+const ri = (a, b) => a + Math.floor(rand() * (b - a + 1)), pick = a => a[Math.floor(rand() * a.length)], chance = p => rand() < p;
+const KSP = .905, KRT = .95; // hệ số hiệu chỉnh để quỹ lương ≈ 8,1 tỷ (FACTORY.md)
+const HO = "Nguyễn Nguyễn Nguyễn Nguyễn Nguyễn Trần Trần Trần Lê Lê Lê Phạm Phạm Hoàng Huỳnh Phan Vũ Võ Võ Đặng Bùi Đỗ Hồ Ngô Dương Lý Đinh Trịnh Mai Lương Tạ Cao Đoàn Lâm Hà Châu Kiều Tô Quách Lưu Thái Trương La".split(" ");
+const DEM_NU = "Thị Thị Thị Thị Thị Thị Thị Ngọc Thu Thanh Kim Mỹ Hồng Bích Thùy Minh".split(" ");
+const TEN_NU = "Hoa Lan Hương Hằng Thảo Trang Linh Nga Yến Mai Huệ Hạnh Nhung Thủy Hiền Liên Loan Phượng Tuyết Vân Hà Duyên Diễm Ngân Thơ Trinh Oanh Quyên Nhàn Tâm Xuân Dung Huyền My Thắm Ly Chi Giang Sen Thu Thanh Kim Bích Lụa Gấm Nhi Vy Tú Hậu".split(" ");
+const DEM_NAM = "Văn Văn Văn Văn Văn Đức Minh Quốc Hữu Công Thanh Ngọc".split(" ");
+const TEN_NAM = "Hùng Minh Tuấn Dũng Hải Nam Long Phúc Tài Khang Lộc Bảo Thịnh Toàn Trung Đức Hiếu Quang Sơn Thắng Tiến Vinh Cường Huy Kiên Tâm Phong Lực Hậu Tú".split(" ");
+const mkName = nu => `${pick(HO)} ${pick(nu ? DEM_NU : DEM_NAM)} ${pick(nu ? TEN_NU : TEN_NAM)}`;
+
+// Mã hàng: [khách hàng, công đoạn [tên, đơn giá đ/sp]] — theo Quy trình công nghệ
+const MH = {
+  "AO-POLO-2611": ["Nordvik Outdoor (Thụy Điển)", [["May vai con",412],["Tra cổ",586],["May nẹp cổ",498],["Tra tay",534],["Vắt sổ sườn",462],["Lên lai áo",378],["Đính nhãn",214],["May đô sau",356]]],
+  "AO-THUN-2402": ["Hanbit Urban (Hàn Quốc)", [["May vai",296],["Viền cổ",452],["Tra tay",418],["Vắt sổ sườn",386],["Lên lai",312],["Đính nhãn",168],["May bo tay",344],["Diễu cổ",274]]],
+  "QUAN-KAKI-0932": ["Bellmont Apparel (Mỹ)", [["May túi hông",624],["May túi sau",688],["Tra khóa",572],["May lưng",646],["Vắt sổ đáy",364],["May đáy",418],["Lên lai quần",336],["Đính đỉa",288]]],
+  "AO-KHOAC-1150": ["Northline Wear (Canada)", [["May thân trước",716],["Tra khóa nẹp",684],["May mũ",652],["Tra tay",598],["May lót",544],["Chặn bo",402],["Lên lai",388],["Đính nhãn",236]]],
+  "SOMI-NU-1210": ["Kazeyama Sports (Nhật)", [["May nẹp áo",458],["Tra cổ",612],["Tra tay",524],["May măng sét",496],["Vắt sổ",352],["Lên lai",326],["Thùa khuy",248],["Đính cúc",232]]],
+  "VAY-XOE-1105": ["Coral Bay Clothing (Úc)", [["May thân váy",482],["Tra khóa giọt lệ",556],["May lưng váy",528],["Viền nách",436],["Vắt sổ",348],["Lên lai váy",402],["Đính nhãn",184],["Ráp sườn",452]]],
+  "QUAN-SHORT-0715": ["Bellmont Apparel (Mỹ)", [["May túi xéo",398],["May túi sau",452],["Tra lưng thun",486],["Vắt sổ đáy",318],["May đáy",364],["Lên lai",286],["Đính nhãn",168],["Chặn đỉa",212]]],
+};
+const CHUYEN = [...Array(15)].map((_, i) => "Chuyền " + dd(i + 1)), LINE_N = [45,44,46,45,47,43,45,46,44,45,48,42,45,44,46]; // Σ 675
+const XUONG = Object.fromEntries(CHUYEN.map((c, i) => [c, i < 8 ? "Xưởng 1" : "Xưởng 2"]));
+const GT = new Set(["Phòng Mẫu","Kỹ thuật","Bảo trì","Kế toán","Nhân sự","Văn phòng"]); // gián tiếp: lương thời gian
+// [bộ phận, số người, tỷ lệ nữ, [[chức danh, số người (0 = phần còn lại), lương CB từ, đến, công đoạn/việc]]] — role đầu tiên là trưởng bộ phận
+const DEPTS = [
+  ...CHUYEN.map((c, i) => [c, LINE_N[i], .88, [["Tổ trưởng",1,6.8e6,6.8e6,["Điều hành chuyền"]],["CN hỗ trợ chuyền",1,4.96e6,4.96e6,["Hỗ trợ chuyền"]],["Công nhân may",0,4.96e6,4.96e6,[]]]]),
+  ["Tổ cắt",55,.3,[["Tổ trưởng cắt",1,6.5e6,6.5e6,["Điều hành bàn cắt"]],["Vận hành máy cắt",8,5.6e6,5.6e6,["Cắt tự động"]],["Công nhân cắt",0,5.2e6,5.2e6,["Trải vải – cắt","Cắt tay","Đánh số – bó hàng","Ép mex"]]]],
+  ["Hoàn thiện",110,.85,[["Tổ trưởng hoàn thiện",2,6.5e6,6.5e6,["Điều hành tổ"]],["CN hoàn thiện",0,4.96e6,4.96e6,["Ủi thành phẩm","Cắt chỉ – vệ sinh","Gấp xếp – đóng thùng","Treo thẻ bài","Đóng gói"]]]],
+  ["QA",28,.8,[["Trưởng QA",1,7.2e6,7.2e6,["Điều hành QA"]],["Nhân viên QC",0,5.2e6,5.2e6,["Kiểm hàng cuối chuyền","Kiểm thành phẩm","Kiểm AQL"]]]],
+  ["Kho NPL",22,.2,[["Thủ kho",1,6.2e6,6.2e6,["Quản lý kho NPL"]],["Công nhân kho",0,4.96e6,4.96e6,["Bốc xếp – nhập vải","Cấp phát phụ liệu","Kiểm vải 4 điểm","Soạn NPL cho cắt"]]]],
+  ["Phòng Mẫu",18,.7,[["Trưởng nhóm mẫu",1,17.8e6,17.8e6,["May mẫu"]],["Nhân viên rập",5,9e6,11.5e6,["Thiết kế rập"]],["Thợ may mẫu",0,8.2e6,9.6e6,["May mẫu"]]]],
+  ["Kỹ thuật",20,.5,[["Trưởng phòng kỹ thuật",1,18e6,18e6,["Quản lý kỹ thuật"]],["Nhân viên IE",6,11e6,14e6,["Bấm giờ – định mức"]],["Kỹ thuật chuyền",0,9.5e6,12.5e6,["Cân chuyền – hướng dẫn"]]]],
+  ["Bảo trì",14,.05,[["Tổ trưởng bảo trì",1,12e6,12e6,["Quản lý bảo trì"]],["Thợ bảo trì máy",0,8.5e6,11e6,["Sửa máy may","Bảo trì điện"]]]],
+  ["Kế toán",10,.8,[["Kế toán trưởng",1,22e6,22e6,["Kế toán tổng hợp"]],["Kế toán viên",0,9.5e6,13e6,["Kế toán lương","Kế toán kho","Kế toán thanh toán"]]]],
+  ["Nhân sự",10,.7,[["Trưởng phòng nhân sự",1,18e6,18e6,["Quản lý nhân sự"]],["Chuyên viên nhân sự",0,9e6,12e6,["Tuyển dụng","Tiền lương – BHXH","Đào tạo"]]]],
+  ["Văn phòng",18,.6,[["Giám đốc nhà máy",1,45e6,45e6,["Điều hành nhà máy"]],["Nhân viên kế hoạch",5,10e6,13e6,["Kế hoạch sản xuất"]],["Merchandiser",4,12e6,16e6,["Theo dõi đơn hàng"]],["Nhân viên XNK",3,10e6,13e6,["Chứng từ xuất nhập khẩu"]],["Lái xe – bảo vệ",0,7.5e6,9.5e6,["Đưa đón – giao hàng","Bảo vệ cổng"]]]],
+];
+// Kế hoạch chuyền tháng 10: mã hàng a đến hết ngày s, sau đó đổi sang mã hàng b (s = 31: không đổi mã)
+const MHK = Object.keys(MH);
+const PLAN = Object.fromEntries(CHUYEN.map(c => { const a = pick(MHK); let b = pick(MHK); while (b === a) b = pick(MHK); return [c, {a, b, s: chance(.6) ? ri(8, 23) : 31}]; }));
+const pool = [...Array(1180)].map((_, i) => i + 1);
+for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+let nextOld = 0, nextNew = 1181;
+const PHISX = {}, CHEDO = {}, NGAYVAO = {}, EMP = [], R = []; // R: dòng lương SP (1 CN × 1 mã hàng × 1 chuyền)
+const TRAIN = {line: ["An toàn lao động, nội quy","Thao tác máy 1 kim","Thao tác máy vắt sổ"], other: ["An toàn lao động, nội quy","Hướng dẫn công việc","Kèm cặp tại vị trí"]};
+DEPTS.forEach(([bp, n, pNu, roles], bi) => {
+  const gt = GT.has(bp), line = !!XUONG[bp], rest = n - roles.reduce((a, r) => a + r[1], 0);
+  roles.forEach(([cd, k, F0, F1, cds], ri0) => { for (let j = 0; j < (k || rest); j++) {
+    const lead = ri0 === 0, isNew = !gt && !k && chance(line ? .055 : .04), sew = line && cd === "Công nhân may";
+    const num = isNew ? nextNew++ : pool[nextOld++], ma = "NV" + dd(num).padStart(4, "0"), nu = chance(lead && !line ? pNu * .7 : pNu) ? 1 : 0, ten = mkName(nu);
+    const F = Math.round(ri(F0 / 1e5, F1 / 1e5) * (gt ? .68 : 1)) * 1e5, bac = gt ? ri(3, 5) : lead ? 5 : isNew ? 1 : pick([2,3,3,3,4,4,4,5]);
+    const from = isNew ? pick(DAYS.filter(d => d >= 2 && d <= 22)) : 1;
+    let H = 0, M = 0; const pres = [];
+    DAYS.filter(d => d >= from).forEach(d => { const x = rand(); x < .022 ? H++ : x < .03 ? 0 : x < .032 ? M++ : pres.push(d); });
+    const px = isNew ? pres.slice(0, 3).map((d, i) => [dd(d) + "/10", TRAIN[line ? "line" : "other"][i], 8, i ? 2 : 0]) : [];
+    if (isNew) { PHISX[ma] = px; NGAYVAO[ma] = dd(from) + "/10/2026"; }
+    const work = pres.slice(px.length), I = nu && !gt && !isNew && chance(.025) ? pres.length : 0;
+    if (I) CHEDO[ma] = pick(["Giờ thứ 8 (thai sản)", "60 phút cho con bú"]);
+    let cdoan = pick(cds), rate = 0, tc = px.reduce((a, r) => a + r[3], 0);
+    if (gt) tc = pick([0, 0, 0, 4, 8, 12, 16]);
+    else if (sew) { // lương SP: sinh sản lượng từng ngày theo mã hàng của chuyền
+      const pl = PLAN[bp], k = ([0,185,246,250,260,272][bac]) * (.96 + .08 * rand()) * KSP * (I ? .92 : 1) * (isNew ? .85 : 1), byMh = {};
+      const cdx = {}; [pl.a, pl.b].forEach(h => { const m = chance(.5) ? 2 : chance(.6) ? 1 : 3, s = new Set(); while (s.size < m) s.add(ri(0, 7)); cdx[h] = [...s].sort((a, b) => a - b); });
+      work.forEach(d => {
+        const mh = d <= pl.s ? pl.a : pl.b, cd2 = cdx[mh].map(i => MH[mh][1][i]), dg = cd2.reduce((a, c) => a + c[1], 0);
+        const sl = Math.round(k * 1000 / dg * (.88 + .24 * rand()) * (mh === pl.b && d - pl.s <= 2 ? .6 : 1)); // 2 ngày đầu vào mã mới ra ít
+        const o = otH(bp, d), b = 7.67 + o; tc += o;
+        (byMh[mh] = byMh[mh] || {cd: cd2, dg, day: {}}).day[d] = {sl, o, tg: Math.round(sl / b * 7.67 * dg), ng: Math.round(sl / b * o * dg * 1.5), mb: 0};
+      });
+      Object.entries(byMh).forEach(([mh, v]) => { const ds = Object.keys(v.day).map(Number); R.push({ma, ten, mh, ch: bp, x: XUONG[bp], cd: v.cd, dg: v.dg, day: v.day, first: Math.min(...ds), last: Math.max(...ds)}); });
+      cdoan = (byMh[pl.b] || byMh[pl.a] || {cd: [["Chờ phân công"]]}).cd.map(c => c[0]).join(", ");
+    } else {
+      rate = Math.round(F / GC * (1.04 + .04 * bac + .04 * rand()) * KRT / 100) * 100; // đơn giá giờ luôn trên lương CB giờ
+      work.forEach(d => tc += otH(bp, d));
+    }
+    const pc = (lead ? "A" : chance(.03) ? "A" : "") + (chance(.04) ? "P" : "") + (bp === "Kho NPL" && chance(.25) ? "X" : "") +
+      (bp === "Tổ cắt" && chance(.6) || cdoan === "Ủi thành phẩm" || bp === "Kho NPL" && chance(.5) ? "D" : "");
+    const con = pick([0,0,0,0,0,1,1,1,2,2]), kpi = isNew ? pick(["B","C"]) : pick("AAAAAAAAAAABBBBBBBCC".split(""));
+    const AP = cdoan === "Bốc xếp – nhập vải" ? ri(5, 14) * 50000 : bp === "Tổ cắt" && chance(.1) ? ri(4, 7) * 40000 : 0;
+    EMP.push({bi, num, s: [ma, ten, bp, isNew ? "CN thử việc" : cd, cdoan, nu, F, pres.length, H, I, M, tc, chance(gt ? .05 : .3) ? 8 : 0, rate, 0, kpi, bac, con, con + (chance(.08) ? 1 : 0),
+      pc, isNew ? 0 : chance(gt ? .5 : .8) ? 1 : 0, isNew ? 0 : lead ? 500000 : 300000, AP, isNew ? 150000 : 0, !isNew && chance(.05) ? ri(5, 20) * 100000 : 0,
+      !isNew || chance(.5) ? `0711 ${dd(num).padStart(4, "0")} ${ri(100, 999)}` : "", chance(.015) ? "Cần kiểm tra" : chance(.72) ? "Đã chốt" : "Tạm tính"]});
+  } });
+});
+// Mua – bán công đoạn: trong cùng chuyền, cùng mã hàng, cùng ngày; người mua (+) làm thay CĐ của người bán (−)
+const MBS = [];
+CHUYEN.forEach(ch => { const rs = R.filter(r => r.ch === ch); for (let n = ri(2, 4); n > 0; n--) {
+  const sell = pick(rs), d = pick(Object.keys(sell.day).map(Number)), buys = rs.filter(r => r.ma !== sell.ma && r.mh === sell.mh && r.day[d]);
+  if (!buys.length) continue;
+  const buy = pick(buys), c = pick(sell.cd), sl = ri(25, 65) * 10, st = d >= 29 ? "Chờ duyệt" : chance(.07) ? "Trả về rà soát" : "Đã vào lương";
+  if (st !== "Trả về rà soát") { sell.day[d].mb -= sl * c[1]; buy.day[d].mb += sl * c[1]; }
+  MBS.push({d, ch, mh: sell.mh, cd: c[0], dg: c[1], sl, sell: sell.ten, buy: buy.ten, st});
+} });
+MBS.sort((a, b) => a.d - b.d).forEach((m, i) => m.so = "MB-" + (1001 + i));
+// Gắn lương SP (W, X) của công nhân may từ bảng lương SP → cùng một nguồn số
+const SPSUM = {};
+R.forEach(r => Object.values(r.day).forEach(x => { const s = SPSUM[r.ma] = SPSUM[r.ma] || {tg: 0, ng: 0, mb: 0, h: 0}; s.tg += x.tg; s.ng += x.ng; s.mb += x.mb; s.h += 7.67; }));
+EMP.forEach(e => { const sp = SPSUM[e.s[0]]; if (sp) { e.s[13] = Math.round(sp.tg / sp.h); e.s[14] = sp.mb; e.s.push(sp); } });
+const SEED = EMP.sort((a, b) => a.bi - b.bi || a.num - b.num).map(e => e.s);
+
+const tax = w => w <= 1e7 ? w * .05 : w <= 3e7 ? 5e5 + (w - 1e7) * .1 : 2.5e6 + (w - 3e7) * .2; // shortcut: 3 bậc đầu biểu thuế 2026, đủ cho mock
+function calc(s) {
+  const [ma, ten, bp, cd, cdoan, nu, F, G, H, I, M, tc, R, rate, mb, kpi, bac, con, AV, pc, xe, AO, AP, AQ, AS, atm, st, sp] = s;
+  const pm = GT.has(bp), h = F / GC, px = PHISX[ma] || [];
+  const L = px.reduce((a, r) => a + r[2], 0), pxT = px.reduce((a, r) => a + r[2] + r[3] * 1.5, 0);
+  const N = pm ? G * 8 : 0, O = pm ? 0 : G * 8 - L, P = (pm ? tc : 0) + pxT, Q = pm ? 0 : tc - px.reduce((a, r) => a + r[3], 0);
+  const J = Math.round(G * 20 / 6) / 10, K = nu ? (G === 0 ? 0 : G <= 1 ? .5 : G <= 2 ? 1 : 1.5) : 0;
+  const pcs = {A: pc.includes("A") ? PCV.A : 0, P: pc.includes("P") ? PCV.P : 0, X: pc.includes("X") ? PCV.X : 0, D: pc.includes("D") ? 15000 * Math.ceil(G) : 0};
+  const AG = pcs.A + pcs.P + pcs.X + pcs.D, hb = (F + AG) / GC, r = Math.round;
+  const U = r(h * N), V = r(hb * P * 1.5), W = pm ? 0 : sp ? sp.tg + sp.mb : r(rate * O) + mb, X = pm ? 0 : sp ? sp.ng : r(rate * Q * 1.5);
+  const Y = r(h * R * 2), Z = r(h * H * 8), AA = r(Math.max(rate, h) * I), AB = r(h * J), AC = r(h * K), AD = r(h * .5 * R / 8), AE = r(F / 26 * M);
+  const S = r(h * (O + N) + hb * (Q + P) * 1.5 + hb * R * 2), T = Math.max(0, S - (U + V + W + X + Y + AB));
+  const AF = con * 100000, AI = HS[bac], AJ = Math.round((O + 1.5 * Q) * AI) / 100;
+  const AK = xe ? r(200000 / 26 * (Math.ceil(G) + R / 8)) : 0, AL = r(650000 / 26 * G * ({A: 1, B: .5, C: 0})[kpi]), AN = ({A: 300000, B: 150000, C: 0})[kpi];
+  const AR = Math.max(0, T + U + V + W + X + Y + Z + AA + AB + AC + AD + AE + AF + AG + AK + AL + AN + AO + AP + AQ);
+  const bh = [r((F + AG) * .08), r((F + AG) * .015), r((F + AG) * .01)], AT = bh[0] + bh[1] + bh[2], AU = r((F + AG) * .01);
+  const AW = Math.max(0, r(AR - V - X - AT - 15500000 - 6200000 * AV)), AX = r(tax(AW));
+  const AY = Math.max(0, AR - AS - AT - AU - AX), AZ = G ? r((AR - Z) / G) : 0;
+  return {ma, ten, bp, cd, cdoan, st: T > 0 ? "Cần kiểm tra" : st, nu, rate, mb, con, pcs, bh, px, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, AA, AB, AC, AD, AE, AF, AG,
+    AH: bac, AI, AJ, AK, AL, AM: kpi, AN, AO, AP, AQ, AR, AS, AT, AU, AV, AW, AX, AY, AZ, BA: atm ? AY : 0, BB: atm ? 0 : r(AY / 1000) * 1000, BC: atm,
+    BD: AZ >= 300000 ? "Giỏi" : AZ >= 250000 ? "Khá" : AZ >= 200000 ? "TB" : "Yếu"};
+}
+const D = SEED.map(calc), DM = Object.fromEntries(D.map(d => [d.ma, d]));
+// self-check: AR = tổng các khoản thu nhập, AY = AR − AS − AT − AU − AX
+const INC = ["T","U","V","W","X","Y","Z","AA","AB","AC","AD","AE","AF","AG","AK","AL","AN","AO","AP","AQ"];
+D.forEach(d => console.assert(INC.reduce((a, k) => a + d[k], 0) === d.AR && d.AR - d.AS - d.AT - d.AU - d.AX === d.AY, d.ma));
+console.assert(D.length === 980 && new Set(D.map(d => d.ma)).size === 980, "quy mô 980 lao động");
+
+const GROUPS = [["cong","Công & giờ","#EAF2FD"],["luong","Các khoản lương","#E8F7EE"],["pc","Phụ cấp & thưởng","#FEF4E6"],["tong","Tổng & khấu trừ","#F1EBFD"],["chi","Chi trả","#F3F4F6"]];
+// [cột, tiêu đề, nhóm, công thức, kiểu: m tiền · h giờ/ngày · x số không cộng · t chữ]
+const COLS = [
+  ["F","LƯƠNG CB","cong","Lương cơ bản theo HĐLĐ (Nhân viên.Lương cơ bản)","m"],
+  ["G","NGÀY CÔNG","cong","Chấm công ngày: ROUND(SUM(Ngày công) bỏ Chủ nhật, 2), trừ công chuyển sang Công việc phát sinh","h"],
+  ["H","P+LỄ+VR+TN (ngày)","cong","Nghỉ phép: SUM(Số công) loại P, Lễ, Việc riêng, Tai nạn","h"],
+  ["I","GIỜ THỨ 8","cong","Bảng Chế độ: số ngày hưởng giờ thứ 8 (thai sản) / 60 phút cho con bú","h"],
+  ["J","NGHỈ GIỮA CA (giờ)","cong","= G × 20 / 60","h"],
+  ["K","PHỤ NỮ (giờ)","cong","Nam = 0; Nữ: G ≤ 1 → 0,5; G ≤ 2 → 1; còn lại 1,5","h"],
+  ["L","TG PSX (giờ)","cong","Bảng Phi SX: giờ huấn luyện (phi sản xuất)","h"],
+  ["M","TG NGỪNG VIỆC (ngày)","cong","Nghỉ phép: SUM(Số công) loại NGV","h"],
+  ["N","GIỜ LV TG","cong","Bảng HS Phòng Mẫu → TG: giờ làm thường các ngày thuộc Phòng Mẫu / khối gián tiếp","h"],
+  ["O","GIỜ LV ĐG","cong","= SUM(Giờ làm thường) bỏ CN − N − giờ Phi SX − giờ Công việc phát sinh","h"],
+  ["P","NGOÀI GIỜ NT TG","cong","= Bảng HS → TGTC + Bảng Phi SX → TỔNG (đã quy đổi tăng ca ×1,5)","h"],
+  ["Q","NGOÀI GIỜ NT ĐG","cong","= SUM(Tổng giờ OT) bỏ CN − P − giờ TC Công việc phát sinh","h"],
+  ["R","CN (giờ)","cong","Chấm công ngày: SUM(Giờ làm thường) của ngày Chủ nhật","h"],
+  ["S","LƯƠNG TỐI THIỂU","luong","= ROUND(F/208×(O+N) + (F+AG)/208×(Q+P)×1,5 + (F+AG)/208×R×2)\n208 = số giờ công chuẩn của kỳ","m"],
+  ["T","BÙ LƯƠNG TỐI THIỂU","luong","= MAX(0, S − (U+V+W+X+Y+AB))","m"],
+  ["U","LƯƠNG TG","luong","Bảng HS Phòng Mẫu → LƯƠNG TG = ROUND(F/208 × N)","m"],
+  ["V","LƯƠNG TC TG","luong","= ROUND((F+AG)/208 × P × 1,5), P gồm cả giờ Phi SX","m"],
+  ["W","LƯƠNG SẢN PHẨM","luong","= Thu nhập khoán ngày trong giờ + thu nhập mua bán công đoạn trong giờ (MB đã mang dấu +/−) — CN may lấy từ tab Lương sản phẩm","m"],
+  ["X","LƯƠNG SP NGOÀI GIỜ","luong","= Thu nhập khoán ngoài giờ × 1,5 + TN mua bán ngoài giờ","m"],
+  ["Y","LƯƠNG CHỦ NHẬT","luong","= ROUND(F/208 × R × 2)","m"],
+  ["Z","LƯƠNG NGÀY F, LỄ, VR, TN","luong","= ROUND(F/208 × H × 8)","m"],
+  ["AA","GIỜ THỨ 8 (tiền)","luong","Bảng Chế độ → SỐ TIỀN = số giờ × MAX(lương SP bình quân giờ, lương CB giờ)","m"],
+  ["AB","LƯƠNG NGHỈ GIỮA CA","luong","= ROUND(F/208 × J)","m"],
+  ["AC","VSPN","luong","= ROUND(F/208 × K)","m"],
+  ["AD","LƯƠNG NGHỈ TRƯA CN","luong","= ROUND(F/208 × 0,5 giờ × số ngày làm Chủ nhật)","m"],
+  ["AE","LƯƠNG NGỪNG VIỆC","luong","= ROUND(F/26 × M)","m"],
+  ["AF","TRỢ CẤP CON NHỎ","pc","Bảng Con nhỏ → SỐ TIỀN = số con dưới 7 tuổi × 100.000","m"],
+  ["AG","PHỤ CẤP (ATVSV, PCCC, xe nâng, độc hại)","pc","= Bảng BHXH (PC ATVSV + PC PCCC + PC xe nâng) + Bảng Độc hại → SỐ TIỀN","m"],
+  ["AH","BẬC","pc","Bảng Tay nghề và KPI → Bậc mới của kỳ","x"],
+  ["AI","HS BẬC","pc","Bảng Tay nghề và KPI → Hệ số của kỳ","x"],
+  ["AJ","HS QĐ","pc","= (O + 1,5×Q) × AI / 100","h"],
+  ["AK","HỖ TRỢ XĂNG XE","pc","Bảng Xăng xe = ROUND(200.000 / 26 × (ROUNDUP(G) + số ngày làm CN))","m"],
+  ["AL","THƯỞNG NĂNG SUẤT","pc","= Đơn giá thưởng NS của chuyền (650.000) ÷ 26 × G; × 0,5 nếu KPI B, × 0 nếu KPI C","m"],
+  ["AM","LOẠI KPI","pc","Bảng Tay nghề và KPI → Hạng KPI của kỳ","t"],
+  ["AN","KPI","pc","Thưởng KPI A = 300.000, B = 150.000, C = 0","m"],
+  ["AO","TRỢ CẤP","pc","Bảng Trợ cấp → CỘNG (Công ty + Quỹ xưởng)","m"],
+  ["AP","BỐC XẾP","pc","Bảng Bốc xếp → SỐ TIỀN","m"],
+  ["AQ","HT KHÁM SK ĐẦU VÀO","pc","Bảng KSK đầu vào → 150.000 nếu ngày vào công ty nằm trong kỳ","m"],
+  ["AR","TỔNG LƯƠNG","tong","= MAX(0, ROUND(SUM(T..AG) + AK + AL + AN + AO + AP + AQ))","m"],
+  ["AS","ĐÃ NHẬN/TẠM ỨNG","tong","Khoản tạm ứng đã nhận trong kỳ","m"],
+  ["AT","BHXH_YT_TN","tong","Bảng BHXH → NLĐ đóng: (F+AG) × (BHXH 8% + BHYT 1,5% + BHTN 1%)","m"],
+  ["AU","CÔNG ĐOÀN PHÍ","tong","Bảng Công đoàn phí → (F+AG) × 1%","m"],
+  ["AV","NGƯỜI P.THUỘC","tong","Thân nhân: số người phụ thuộc thuế","x"],
+  ["AW","THU NHẬP CHỊU THUẾ","tong","= MAX(0, ROUND(AR − V − X − AT − 15.500.000 − 6.200.000 × AV))","m"],
+  ["AX","THUẾ TNCN","tong","Lũy tiến từng phần theo Biểu thuế TNCN trên AW","m"],
+  ["AY","THỰC LĨNH","tong","= MAX(0, ROUND(AR − AS − AT − AX − AU))","m"],
+  ["AZ","BÌNH QUÂN","chi","= G > 0 ? ROUND((AR − Z) / G) : 0","x"],
+  ["BA","ATM","chi","= có tài khoản ATM ? ROUND(AY) : 0","m"],
+  ["BB","TIỀN MẶT","chi","= có tài khoản ATM ? 0 : ROUND(AY, −3)","m"],
+  ["BC","TK ATM","chi","Nhân viên.Tài khoản ATM","t"],
+  ["BD","XẾP LOẠI","chi","AZ ≥ 300.000 Giỏi; ≥ 250.000 Khá; ≥ 200.000 TB; còn lại Yếu","t"],
+];
+const RED = ["AS","AT","AU","AX"], BOLD = ["AR","AY"];
+const BADGE = {"Đã chốt": "b-ok", "Tạm tính": "b-warn", "Cần kiểm tra": "b-bad", "Chờ duyệt": "b-warn", "Trả về rà soát": "b-bad", "Đã vào lương": "b-ok"};
+const dash = '<span class="muted">–</span>';
+const fmt = (c, v) => c[4] === "t" ? (v || dash) : v === 0 ? dash : c[4] === "m" ? f(v) : f2(v);
+const fTy = v => (v / 1e9).toLocaleString("vi-VN", {maximumFractionDigits: 2}) + " tỷ";
+const fTr = v => (v / 1e6).toLocaleString("vi-VN", {maximumFractionDigits: 1}) + " tr";
+const sum = (a, fn) => a.reduce((s, x) => s + fn(x), 0);
+const kpi = (l, v, s, c = "", sc = "muted") => `<div class="kpi"><div class="l">${l}</div><div class="v num ${c}">${v}</div>${s ? `<div class="s ${sc}">${s}</div>` : ""}</div>`;
+
+// KPI tính từ toàn bộ dữ liệu sinh ra
+const QUY = sum(D, d => d.AR), LSP = sum(D, d => d.W + d.X), TT = D.filter(d => !GT.has(d.bp));
+$("h-sub").textContent = `Kỳ lương tháng 10/2026 · Công ty May Demo · ${f(D.length)} lao động`;
+$("k-pay").innerHTML = kpi("Tổng quỹ lương", fTy(QUY), "▲ 2,4% so với tháng 9", "", "ok") +
+  kpi("Lao động hưởng lương", f(D.length), `${f(TT.length)} trực tiếp · ${f(D.length - TT.length)} gián tiếp · 15 chuyền`) +
+  kpi("Lương sản phẩm", fTy(LSP), `${Math.round(LSP / QUY * 100)}% quỹ lương`) +
+  kpi("Thu nhập bình quân", fTr(QUY / D.length), `Thực lĩnh BQ CN trực tiếp ${fTr(sum(TT, d => d.AY) / TT.length)}`) +
+  kpi("Cần kiểm tra", f(D.filter(d => d.st === "Cần kiểm tra").length), "Bù lương tối thiểu / chênh &gt;15%", "warn");
+
+// Phân trang dùng chung: chỉ render trang đang xem
+const PG = 50, pg = {pay: 0, sp: 0, sub: 0};
+function pager(id, n, k, fn) {
+  const last = Math.max(0, Math.ceil(n / PG) - 1), p = pg[k] = Math.min(pg[k], last);
+  const go = q => `onclick="this.closest('.card').querySelector('.tbl-wrap').scrollTop=0;pg.${k}=${q};${fn}()"`, b = (t, ok, q) => `<button class="btn sm" ${ok ? go(q) : "disabled"}>${t}</button>`;
+  $(id).innerHTML = `<span>${n ? f(p * PG + 1) : 0}–${f(Math.min(n, (p + 1) * PG))} / ${f(n)}</span>` + b("«", p, 0) + b("‹", p, p - 1) + `<span>Trang ${p + 1} / ${last + 1}</span>` + b("›", p < last, p + 1) + b("»", p < last, last);
+  return p * PG;
+}
+
+const on = new Set(GROUPS.map(g => g[0]));
+const BPS = [...new Set(D.map(d => d.bp))];
+const opts = all => `<option value="">${all}</option>` + ["Xưởng 1","Xưởng 2"].map(x => `<option>${x}</option>`).join("") + BPS.map(b => `<option>${b}</option>`).join("");
+$("f-bp").innerHTML = opts("Tất cả xưởng / chuyền");
+const inBp = (d, v) => !v || d.bp === v || XUONG[d.bp] === v;
+
+function renderPay() {
+  const bp = $("f-bp").value, st = $("f-st").value, q = $("f-q").value.trim().toLowerCase();
+  const rows = D.filter(d => inBp(d, bp) && (!st || d.st === st) && (!q || (d.ma + " " + d.ten).toLowerCase().includes(q)));
+  const cols = COLS.filter(c => on.has(c[2]));
+  const gs = (c, i) => i === 0 || c[2] !== cols[i - 1][2] ? " gs" : "";
+  const cls = c => c[4] === "t" ? "" : "right num" + (RED.includes(c[0]) ? " bad" : "");
+  const h1 = `<tr><th rowspan="2" class="s1">Mã NV</th><th rowspan="2" class="s2">Họ tên</th><th rowspan="2">Bộ phận</th><th rowspan="2">Chức danh</th><th rowspan="2">Trạng thái</th>` +
+    GROUPS.filter(g => on.has(g[0])).map(g => `<th class="gh gs" style="background:${g[2]}" colspan="${cols.filter(c => c[2] === g[0]).length}">${g[1]}</th>`).join("") + "</tr>";
+  const h2 = "<tr>" + cols.map((c, i) => `<th class="right${gs(c, i)}" title="${c[0]} · ${c[1]}&#10;${c[3].replace(/\n/g, "&#10;")}"><span class="cl">${c[0]}</span>${c[1]}</th>`).join("") + "</tr>";
+  const p0 = pager("pay-pg", rows.length, "pay", "renderPay");
+  const body = rows.slice(p0, p0 + PG).map(d => `<tr class="click" onclick="openD('${d.ma}')"><td class="s1 muted">${d.ma}</td><td class="s2"><b>${d.ten}</b></td><td>${d.bp}</td><td>${d.cd}</td><td><span class="badge ${BADGE[d.st]}">${d.st}</span></td>` +
+    cols.map((c, i) => { const v = fmt(c, d[c[0]]); return `<td class="${cls(c)}${gs(c, i)}">${BOLD.includes(c[0]) ? `<b>${v}</b>` : v}</td>`; }).join("") + "</tr>").join("");
+  const foot = `<tr><td class="s1">Cộng</td><td class="s2">${f(rows.length)} nhân viên</td><td colspan="3"></td>` +
+    cols.map((c, i) => `<td class="${cls(c)}${gs(c, i)}">${"mh".includes(c[4]) ? fmt(c, sum(rows, d => d[c[0]])) : ""}</td>`).join("") + "</tr>";
+  $("pay").innerHTML = `<thead>${h1}${h2}</thead><tbody>${body || `<tr><td colspan="9" class="muted">Không có nhân viên phù hợp</td></tr>`}</tbody><tfoot>${foot}</tfoot>`;
+  $("chips").innerHTML = GROUPS.map(g => `<button class="chip${on.has(g[0]) ? " on" : ""}" onclick="tog('${g[0]}')"><i style="background:${g[2]};border:1px solid #D1D5DB"></i>${g[1]} (${COLS.filter(c => c[2] === g[0]).length})</button>`).join("");
+}
+function tog(g) { on.has(g) ? on.delete(g) : on.add(g); renderPay(); }
+$("all").onclick = () => { GROUPS.forEach(g => on.add(g[0])); renderPay(); };
+["f-bp", "f-st", "f-q"].forEach(id => $(id).oninput = () => { pg.pay = 0; renderPay(); });
+
+// ===== Lương sản phẩm theo mã hàng – chuyền (mô phỏng sheet "ĐG NGAY": 1 file = 1 mã hàng × 1 chuyền × 1 tuần) =====
+const SK = ["sl", "tt", "tg", "ng", "mb", "tong"];
+function V(r, cols) {
+  const ds = cols.flatMap(c => c.days).map(d => r.day[d]).filter(Boolean), s = k => ds.reduce((a, x) => a + x[k], 0);
+  const v = {c: cols.map(c => c.days.reduce((a, d) => a + (r.day[d] ? r.day[d].sl : 0), 0)), sl: s("sl"), tg: s("tg"), ng: s("ng"), mb: s("mb"), n: ds.length};
+  return Object.assign(v, {tt: v.sl * r.dg, tong: v.tg + v.ng + v.mb});
+}
+const ADD = (vs, n) => vs.reduce((a, v) => (v.c.forEach((x, i) => a.c[i] += x), SK.forEach(k => a[k] += v[k]), a), Object.assign({c: Array(n).fill(0)}, ...SK.map(k => ({[k]: 0}))));
+const MONTH = WEEKS.map(w => ({lab: `${dd(w[0])}–${dd(w[w.length - 1])}/10`, days: w}));
+// self-check: thành tiền = SL × ĐG ≈ TN trong giờ + TN ngoài giờ ÷ 1,5 (sai số làm tròn ≤ 1 đ/ngày); mua–bán CĐ cân nhau; W, X bảng lương = tổng tab lương SP
+R.forEach(r => { const v = V(r, MONTH); console.assert(Math.abs(v.tt - v.tg - v.ng / 1.5) <= v.n, "SP", r.ma, r.mh); });
+console.assert(ADD(R.map(r => V(r, MONTH)), 5).mb === 0, "MB không cân");
+Object.entries(SPSUM).forEach(([ma, s]) => console.assert(DM[ma].W === s.tg + s.mb && DM[ma].X === s.ng, "W/X lệch lương SP", ma));
+
+$("sp-per").innerHTML = `<option value="m">Tháng 10/2026 (cột theo tuần)</option>` + MONTH.map((w, i) => `<option value="${i}">Tuần ${w.lab} (cột theo ngày)</option>`).join("");
+$("sp-per").value = "2"; // tuần 12–17/10: nhiều chuyền đổi mã hàng, CN có 2 dòng mã hàng
+$("sp-c").innerHTML = `<option value="">Tất cả chuyền</option>` + CHUYEN.map(c => `<option>${c}</option>`).join("");
+$("sp-m").innerHTML = `<option value="">Tất cả mã hàng</option>` + MHK.map(m => `<option>${m}</option>`).join("");
+let spMode = "mc";
+const spCols = () => { const p = $("sp-per").value; return p === "m" ? MONTH : WEEKS[p].map(d => ({lab: `${TH[dow(d)]} ${dd(d)}/10`, days: [d]})); };
+const fMB = v => v > 0 ? `<span class="ok">+${f(v)}</span>` : v < 0 ? `<span class="bad">${f(v)}</span>` : dash;
+const range = rs => `${dd(Math.min(...rs.map(r => r.first)))}–${dd(Math.max(...rs.map(r => r.last)))}/10`;
+const cells = (v, dg) => v.c.map(x => `<td class="right num dc">${x ? f(x) : dash}</td>`).join("") +
+  `<td class="right num gs">${f(v.sl)}</td><td class="right num">${dg ? f(dg) : ""}</td><td class="right num">${f(v.tt)}</td><td class="right num gs">${f(v.tg)}</td><td class="right num">${v.ng ? f(v.ng) : dash}</td><td class="right num">${fMB(v.mb)}</td><td class="right num gs"><b>${f(v.tong)}</b></td>`;
+
+function renderSP() {
+  const cols = spCols(), x = $("sp-x").value, c = $("sp-c").value, m = $("sp-m").value, q = $("sp-q").value.trim().toLowerCase();
+  const inP = R.map((r, i) => Object.assign({r, i}, V(r, cols))).filter(o => o.sl || o.mb); // có sản lượng trong kỳ
+  // ma trận: chỉ lọc kỳ + xưởng để luôn thấy đủ các ô
+  const mx = inP.filter(o => !x || o.r.x === x), chs = CHUYEN.filter(k => mx.some(o => o.r.ch === k)), mhs = MHK.filter(h => mx.some(o => o.r.mh === h));
+  const cell = {}; mx.forEach(o => { const z = cell[o.r.mh + "|" + o.r.ch] = cell[o.r.mh + "|" + o.r.ch] || {tong: 0, sl: 0, cn: new Set()}; z.tong += o.tong; z.sl += o.sl; z.cn.add(o.r.ma); });
+  const tot = (h, k) => sum(Object.entries(cell).filter(([key]) => { const [a, b] = key.split("|"); return (!h || a === h) && (!k || b === k); }), e => e[1].tong);
+  $("sp-mx-d").textContent = "· " + $("sp-per").selectedOptions[0].text.replace(/ \(.*/, "");
+  $("sp-mx").innerHTML = `<thead><tr><th>Mã hàng</th>${chs.map(k => `<th class="right">${k.replace("Chuyền", "C")}<span class="cl">${XUONG[k]}</span></th>`).join("")}<th class="right">Cộng mã hàng</th></tr></thead><tbody>` +
+    mhs.map(h => `<tr><td><b>${h}</b><span class="cl">${MH[h][0]}</span></td>` + chs.map(k => { const z = cell[h + "|" + k]; return z ? `<td class="right num cell" style="${m === h && c === k ? "background:var(--primary-50)" : ""}" onclick="spPick('${h}','${k}')"><b>${fTr(z.tong)}</b><span class="cl">${f(z.sl)} sp · ${z.cn.size} CN</span></td>` : `<td class="right">${dash}</td>`; }).join("") + `<td class="right num tot">${fTr(tot(h))}</td></tr>`).join("") +
+    `</tbody><tfoot><tr><td>Cộng chuyền</td>${chs.map(k => `<td class="right num">${fTr(tot("", k))}</td>`).join("")}<td class="right num">${fTr(tot())}</td></tr></tfoot>`;
+  console.assert(Math.abs(sum(mhs, h => tot(h)) - sum(chs, k => tot("", k))) < 1, "ma trận lệch");
+
+  const rows = inP.filter(o => (!x || o.r.x === x) && (!c || o.r.ch === c) && (!m || o.r.mh === m) && (!q || (o.r.ma + " " + o.r.ten).toLowerCase().includes(q)));
+  rows.sort(spMode === "mc" ? (a, b) => a.r.ch.localeCompare(b.r.ch) || a.r.first - b.r.first || a.r.mh.localeCompare(b.r.mh) || a.r.ma.localeCompare(b.r.ma) : (a, b) => a.r.ma.localeCompare(b.r.ma) || a.r.first - b.r.first);
+  const key = o => spMode === "mc" ? o.r.mh + " · " + o.r.ch : o.r.ma, n = cols.length, G = new Map();
+  rows.forEach(o => { const k = key(o); G.has(k) ? G.get(k).push(o) : G.set(k, [o]); });
+  const line = o => `<tr class="click" onclick="openSP(${o.i})"><td class="s1 muted">${o.r.ma}</td><td class="s2"><b>${o.r.ten}</b></td><td>${o.r.ch}</td><td>${o.r.mh}</td><td title="${o.r.cd.map(c => `${c[0]}: ${f(c[1])} đ`).join("&#10;")}">${o.r.cd.length} CĐ · <span class="muted">${o.r.cd.map(c => c[0]).join(", ")}</span></td>` + cells(o, o.r.dg) + "</tr>";
+  // nhóm: dòng tiêu đề + cộng nhóm tính trên cả nhóm (kể cả phần nằm ở trang khác)
+  const p0 = pager("sp-pg", rows.length, "sp", "renderSP"), page = rows.slice(p0, p0 + PG);
+  let body = "";
+  page.forEach((o, idx) => {
+    const g = G.get(key(o)), r0 = g[0].r;
+    if (spMode === "mc" && (idx === 0 || key(page[idx - 1]) !== key(o)))
+      body += `<tr class="grp"><td class="sg s1" colspan="2" style="max-width:254px">${r0.mh} · ${r0.ch}${g[0] !== o ? " (tiếp)" : ""}</td><td colspan="3"><span class="muted" style="font-weight:500">${MH[r0.mh][0]} · ${range(g.map(o => o.r))} · ${g.length} CN</span></td>${cells(ADD(g, n), 0)}</tr>`;
+    body += line(o);
+    if (spMode === "nv" && g.length > 1 && g[g.length - 1] === o)
+      body += `<tr class="wsub"><td class="s1">${r0.ma}</td><td class="s2">Cộng ${r0.ten.split(" ").pop()}</td><td colspan="3" class="muted">${g.length} dòng: ${g.map(o => o.r.mh + " / " + o.r.ch.replace("Chuyền ", "C")).join(" · ")}</td>${cells(ADD(g, n), 0)}</tr>`;
+  });
+  const T = ADD(rows, n);
+  $("sp-t").innerHTML = `<thead><tr><th class="s1">Mã NV</th><th class="s2">Họ tên</th><th>Chuyền</th><th>Mã hàng</th><th>Công đoạn</th>${cols.map(c => `<th class="dc">${c.lab}</th>`).join("")}` +
+    `<th class="right gs">Tổng SL</th><th class="right" title="Tổng đơn giá các CĐ được phân công">ĐG CĐ</th><th class="right" title="= Tổng SL × ĐG CĐ">Thành tiền</th><th class="right gs">Lương SP trong giờ</th><th class="right">Lương SP ngoài giờ</th><th class="right">Mua–bán CĐ</th><th class="right gs">Tổng tiền</th></tr></thead>` +
+    `<tbody>${body || `<tr><td colspan="${n + 12}" class="muted">Không có công nhân phù hợp</td></tr>`}</tbody>` +
+    `<tfoot><tr><td class="s1">Cộng</td><td class="s2">${f(rows.length)} dòng · ${f(new Set(rows.map(o => o.r.ma)).size)} CN</td><td colspan="3" class="muted">${G.size} ${spMode === "mc" ? "nhóm mã hàng – chuyền" : "công nhân"}</td>${cells(T, 0)}</tr></tfoot>`;
+}
+function spPick(h, k) { const same = $("sp-m").value === h && $("sp-c").value === k; $("sp-m").value = same ? "" : h; $("sp-c").value = same ? "" : k; pg.sp = 0; renderSP(); }
+["sp-per", "sp-x", "sp-c", "sp-m", "sp-q"].forEach(id => $(id).oninput = () => { pg.sp = 0; renderSP(); });
+document.querySelectorAll("[data-g]").forEach(b => b.onclick = () => { spMode = b.dataset.g; pg.sp = 0; document.querySelectorAll("[data-g]").forEach(e => e.classList.toggle("on", e === b)); renderSP(); });
+
+function openSP(i) {
+  const r = R[i], days = spCols().flatMap(c => c.days).filter(d => r.day[d]), v = V(r, spCols());
+  $("d-av").textContent = r.ten.split(" ").pop()[0];
+  $("d-name").textContent = r.ten;
+  const other = R.map((o, j) => [o, j]).filter(([o]) => o.ma === r.ma && o !== r);
+  $("d-sub").innerHTML = `${r.ma} · ${r.ch} (${r.x}) · <b>${r.mh}</b>` + (other.length ? `<br>Cũng làm: ${other.map(([o, j]) => `<a href="#" onclick="openSP(${j});return false">${o.mh} · ${o.ch}</a>`).join(", ")}` : "");
+  const per = $("sp-per").selectedOptions[0].text.replace(/ \(.*/, "");
+  $("d-body").innerHTML = `<div class="kpi" style="background:var(--primary-50);border-color:transparent"><div class="l">Tiền lương SP · ${per}</div><div class="v num">${f(v.tong)} đ</div><div class="s muted">Trong giờ ${f(v.tg)} · ngoài giờ ${f(v.ng)} · mua–bán CĐ ${v.mb > 0 ? "+" : ""}${f(v.mb)}</div></div>` +
+    `<div class="sec">Công đoạn được phân công · ${MH[r.mh][0]}</div><table class="dt"><thead><tr><th>Công đoạn</th><th>Đơn giá</th><th>SL</th><th>Thành tiền</th></tr></thead><tbody>` +
+    r.cd.map(c => `<tr><td>${c[0]}</td><td class="num">${f(c[1])}</td><td class="num">${f(v.sl)}</td><td class="num">${f(v.sl * c[1])}</td></tr>`).join("") +
+    `<tr class="sum"><td>Cộng ${r.cd.length} CĐ</td><td class="num">${f(r.dg)}</td><td class="num">${f(v.sl)}</td><td class="num">${f(v.tt)}</td></tr></tbody></table>` +
+    `<div class="sec">Sản lượng & thu nhập từng ngày</div><table class="dt"><thead><tr><th>Ngày</th><th>Giờ TC</th><th>SL</th><th>TN trong giờ</th><th>TN ngoài giờ</th><th>MB</th><th>TN ngày</th></tr></thead><tbody>` +
+    days.map(d => { const x = r.day[d]; return `<tr><td>${TH[dow(d)]} ${dd(d)}/10</td><td class="num">${f2(x.o)}</td><td class="num">${f(x.sl)}</td><td class="num">${f(x.tg)}</td><td class="num">${f(x.ng)}</td><td class="num">${fMB(x.mb)}</td><td class="num"><b>${f(x.tg + x.ng + x.mb)}</b></td></tr>`; }).join("") +
+    `<tr class="sum"><td>Cộng ${days.length} ngày</td><td></td><td class="num">${f(v.sl)}</td><td class="num">${f(v.tg)}</td><td class="num">${f(v.ng)}</td><td class="num">${fMB(v.mb)}</td><td class="num">${f(v.tong)}</td></tr></tbody></table>` +
+    `<div class="note">ⓘ Thành tiền = SL × đơn giá CĐ; chia trong giờ / ngoài giờ theo giờ TC từng ngày (ngoài giờ × 1,5).</div>`;
+  $("drawer").classList.add("on"); $("dbg").classList.add("on");
+}
+
+// ===== Mua – bán công đoạn =====
+const cntSt = s => MBS.filter(m => m.st === s).length;
+$("k-mb").innerHTML = kpi("Phiếu kỳ 10/2026", f(MBS.length), `${CHUYEN.length} chuyền`) + kpi("Chờ phòng công nghệ duyệt", cntSt("Chờ duyệt"), "", "warn") +
+  kpi("Trả về rà soát", cntSt("Trả về rà soát"), "", "bad") + kpi("Đã vào lương", cntSt("Đã vào lương"), "", "ok");
+$("mb-t").innerHTML = MBS.slice().reverse().map(m => `<tr><td>${m.so}</td><td>${dd(m.d)}/10</td><td>${m.ch}</td><td>${m.mh}</td><td>${m.cd}</td><td>${m.sell} → ${m.buy}</td><td class="right num">${f(m.sl)}</td><td class="right num">${f(m.dg)}</td><td class="right num">${f(m.sl * m.dg)}</td><td><span class="badge ${BADGE[m.st]}">${m.st}</span></td></tr>`).join("");
+
+// Bảng con: [tên, mô tả, tiêu đề cột, hàm trả về dòng]
+const P = (fn, keep = () => true) => () => D.filter(keep).map(d => [d.ma, d.ten, ...fn(d)]);
+const QL = BPS.filter(b => !GT.has(b)).map(b => { const ds = D.filter(d => d.bp === b), q = sum(ds, d => d.W + d.X), hs = Math.round(sum(ds, d => d.AJ) * 10) / 10; return [b, ds.length, q, hs, Math.round(q / hs)]; });
+const CVPS = [...Array(14)].map(() => { const r = pick(R); return [r.ma, r.ten, pick(["Thêu logo ngực","Thêu chữ tay áo","Sửa hàng lỗi khách trả","Tháo – may lại đường diễu","Ép seam chống thấm"]), r.mh, ri(2, 6) * 4, pick([0, 0, 2, 4]), ri(34, 40) * 10000]; }).map(r => [...r, Math.round(r[4] / 8 * r[6])]);
+const SUBS = [
+  ["Bảng công", "Chấm công ngày + nghỉ phép theo kỳ 01–31/10/2026", ["Mã NV","Họ tên","Bộ phận","Ngày công","Giờ làm thường","Giờ tăng ca","Giờ CN","Nghỉ P/Lễ (ngày)","Loại nghỉ"],
+    P(d => [d.bp, d.G, d.O + d.N + d.L, d.Q + (GT.has(d.bp) ? d.P : 0), d.R, d.H, d.H ? "P – phép năm" : d.M ? "NGV – ngừng việc" : "–"])],
+  ["Quỹ lương", "Quỹ lương sản phẩm theo bộ phận (đơn giá tiền lương) · đơn giá/HS = Quỹ ÷ ΣHS QĐ", ["Bộ phận","Số NV","Quỹ lương SP","ΣHS quy đổi","Đơn giá / HS"], () => QL],
+  ["Chế độ", "Giờ thứ 8 (thai sản) và 60 phút cho con bú — đơn giá = MAX(lương SP BQ giờ, lương CB giờ)", ["Mã NV","Họ tên","Chế độ","Số giờ","Đơn giá giờ","Số tiền"],
+    P(d => [CHEDO[d.ma], d.I, Math.round(Math.max(d.rate, d.F / GC)), d.AA], d => d.I)],
+  ["Con nhỏ", "Trợ cấp con nhỏ dưới 7 tuổi · 100.000 đ/con/tháng", ["Mã NV","Họ tên","Bộ phận","Số con","Mức","Số tiền"], P(d => [d.bp, d.con, 100000, d.AF], d => d.con)],
+  ["BHXH", "Nền đóng = mức lương + phụ cấp · NLĐ 10,5% · công ty 21,5%", ["Mã NV","Họ tên","Mức lương","PC ATVSV","PC PCCC","PC xe nâng","Độc hại","BS lương","BHXH 8%","BHYT 1,5%","BHTN 1%","NLĐ tổng","Công ty 21,5%"],
+    P(d => [d.F, d.pcs.A, d.pcs.P, d.pcs.X, d.pcs.D, 0, ...d.bh, d.AT, Math.round((d.F + d.AG) * .215)])],
+  ["Bốc xếp", "Tiền bốc xếp theo tháng (khoản mục BOC_XEP)", ["Mã NV","Họ tên","Bộ phận","Tháng","Số tiền"], P(d => [d.bp, "10/2026", d.AP], d => d.AP)],
+  ["Trợ cấp", "Trợ cấp xưởng theo tháng: phần công ty + quỹ xưởng", ["Mã NV","Họ tên","Bộ phận","Công ty","Quỹ xưởng","Cộng"], P(d => [d.bp, Math.min(d.AO, 200000), d.AO - Math.min(d.AO, 200000), d.AO], d => d.AO)],
+  ["Công đoàn phí", "Danh sách thu công đoàn phí kỳ 10/2026 · 1% nền đóng BHXH", ["Mã NV","Họ tên","Bộ phận","Nền đóng","Tỷ lệ","Số tiền"], P(d => [d.bp, d.F + d.AG, "1%", d.AU])],
+  ["Độc hại", "Bồi dưỡng độc hại theo tháng · 15.000 đ/ngày công", ["Mã NV","Họ tên","Bộ phận","Ngày tính","Mức/ngày","Số tiền"], P(d => [d.bp, Math.ceil(d.G), 15000, d.pcs.D], d => d.pcs.D)],
+  ["Xăng xe", "Hỗ trợ xăng xe = 200.000 / 26 × (ngày công làm tròn lên + ngày CN)", ["Mã NV","Họ tên","Bộ phận","Mức tháng","Số ngày tính","Số tiền"], P(d => [d.bp, 200000, Math.ceil(d.G) + d.R / 8, d.AK], d => d.AK)],
+  ["HS Phòng Mẫu", "Giờ làm & lương thời gian Phòng Mẫu và khối gián tiếp", ["Mã NV","Họ tên","Chức danh","Giờ TG","Giờ TC (TGTC)","Lương TG","Lương TC"], P(d => [d.cd, d.N, d.P, d.U, d.V], d => d.N)],
+  ["Khám SK đầu vào", "Nhân viên mới vào trong kỳ × mức hỗ trợ 150.000", ["Mã NV","Họ tên","Bộ phận","Ngày vào","Mức","Số tiền"], P(d => [d.bp, NGAYVAO[d.ma], 150000, d.AQ], d => d.AQ)],
+  ["Phi SX", "Giờ huấn luyện (phi sản xuất) · TỔNG = giờ HL + giờ TC × 150%", ["Mã NV","Họ tên","Ngày","Nội dung","Giờ HL","Giờ TC","Tổng quy đổi"],
+    () => D.flatMap(d => d.px.map(r => [d.ma, d.ten, r[0], r[1], r[2], r[3], r[2] + r[3] * 1.5]))],
+  ["Công việc phát sinh", "Việc ngoài định mức (vd thêu) · thành tiền = giờ LV ÷ 8 × lương định mức ngày", ["Mã NV","Họ tên","Công việc","Mã hàng","Giờ LV","Giờ TC","Lương ĐM ngày","Thành tiền"], () => CVPS],
+];
+let cur = 0;
+function renderSub() {
+  const [n, desc, hd, fn] = SUBS[cur], rows = fn(), num = rows.length && rows[0].map(v => typeof v === "number");
+  $("sub-nav").innerHTML = SUBS.map((s, i) => `<button class="${i === cur ? "on" : ""}" onclick="cur=${i};pg.sub=0;renderSub()">${s[0]}<span>${f(s[3]().length)}</span></button>`).join("");
+  $("sub-h").textContent = n; $("sub-d").textContent = desc;
+  const tot = sum(rows, r => r[r.length - 1]), p0 = pager("sub-pg", rows.length, "sub", "renderSub");
+  $("sub-t").innerHTML = `<thead><tr>${hd.map((h, i) => `<th class="${num[i] ? "right" : ""}">${h}</th>`).join("")}</tr></thead><tbody>` +
+    rows.slice(p0, p0 + PG).map(r => `<tr>${r.map((v, i) => `<td class="${num[i] ? "right num" : i === 0 ? "muted" : ""}">${typeof v === "number" ? (v ? f2(v) : dash) : i === 1 ? `<b>${v}</b>` : v}</td>`).join("")}</tr>`).join("") +
+    `</tbody><tfoot><tr><td colspan="${hd.length - 1}">Cộng ${f(rows.length)} dòng</td><td class="right num">${f2(tot)}</td></tr></tfoot>`;
+}
+
+function openD(ma) {
+  const d = DM[ma];
+  $("d-av").textContent = d.ten.split(" ").pop()[0];
+  $("d-name").textContent = d.ten;
+  $("d-sub").innerHTML = `${d.ma} · ${d.bp} · ${d.cd} <span class="badge ${BADGE[d.st]}">${d.st}</span>`;
+  const row = c => `<div class="r"><span title="${c[3]}">${c[1]} <span class="muted">(${c[0]})</span></span><b class="num${RED.includes(c[0]) ? " bad" : ""}">${RED.includes(c[0]) && d[c[0]] ? "−" : ""}${fmt(c, d[c[0]])}</b></div>`;
+  const grp = g => COLS.filter(c => c[2] === g && (g === "cong" || d[c[0]] || c[0] === "AR" || c[0] === "AY"));
+  $("d-body").innerHTML = `<div class="kpi" style="background:var(--primary-50);border-color:transparent"><div class="l">Thực lĩnh tháng 10/2026</div><div class="v num">${f(d.AY)} đ</div><div class="s muted">Tổng lương ${f(d.AR)} · Bình quân ${f(d.AZ)}/ngày · Xếp loại ${d.BD}</div></div>` +
+    GROUPS.map(g => `<div class="sec">${g[1]}</div><div class="rows">${grp(g[0]).map(row).join("")}` +
+      (g[0] === "luong" || g[0] === "pc" ? `<div class="r sum"><span>Cộng ${g[1].toLowerCase()}</span><b class="num">${f(grp(g[0]).filter(c => INC.includes(c[0])).reduce((a, c) => a + d[c[0]], 0))}</b></div>` : "") + "</div>").join("") +
+    `<div class="note">ⓘ Lương tối thiểu (S) dùng để so sánh, không cộng vào tổng lương; chỉ phần bù (T) được cộng.</div>`;
+  $("drawer").classList.add("on"); $("dbg").classList.add("on");
+}
+function closeD() { $("drawer").classList.remove("on"); $("dbg").classList.remove("on"); }
+document.querySelectorAll(".tab").forEach(t => t.onclick = () => {
+  document.querySelectorAll(".tab,.view").forEach(e => e.classList.remove("on"));
+  t.classList.add("on"); $(t.dataset.v).classList.add("on");
+});
+renderPay(); renderSP(); renderSub();
+</script>
+</body>
+</html>

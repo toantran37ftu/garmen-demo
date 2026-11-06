@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kế hoạch sản xuất</title>
+<link rel="stylesheet" href="../shared.css">
+<style>
+.gw{overflow:auto;max-height:72vh}
+#gantt{position:relative}
+.gr{display:flex;border-bottom:1px solid var(--line);min-height:62px}
+.gr>.c1,.gr>.c2{position:sticky;background:#fff;z-index:3;padding:8px 10px;border-right:1px solid var(--line);flex-shrink:0;font-size:13px}
+.c1{left:0;width:110px}.c2{left:110px;width:140px}
+.c1 b,.c2 b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.c1 small,.c2 small{display:block;font-size:12px;color:var(--muted)}
+.tk{position:relative;flex-shrink:0;overflow:hidden}
+.gh{position:sticky;top:0;z-index:4;min-height:46px}
+.gh>div,.gh>.c1,.gh>.c2{background:#FAFAFB;font-size:12px;font-weight:600;color:var(--muted);z-index:5}
+.mo{position:absolute;top:4px;font-size:12px;font-weight:700;color:var(--ink);border-left:1px solid #CBD0D8;padding-left:4px;height:42px;white-space:nowrap}
+.wk{position:absolute;top:26px;font-size:11px;padding-left:3px;color:var(--muted);white-space:nowrap}
+.gg{min-height:44px;cursor:pointer}
+.gg>.c1{width:250px;background:#F6F8FB}
+.gg>.tk{background-color:#F6F8FB}
+.car{display:inline-block;transition:transform .15s}
+.grp.off .go{display:none}.grp.off .car{transform:rotate(-90deg)}
+.gs{position:absolute;top:17px;height:10px;border-radius:5px;background:#D6DCE5}
+.gb{position:absolute;top:13px;height:44px;cursor:grab;border-radius:6px;overflow:hidden;touch-action:pan-y;user-select:none;-webkit-user-select:none}
+.gb:hover{outline:2px solid #111827}
+.gb.drag{cursor:grabbing;outline:2px dashed #111827;opacity:.92;z-index:2}
+.bt{position:absolute;inset:0;padding:4px 10px 0 7px;color:#fff;font-size:12px;font-weight:600;line-height:18px;text-shadow:0 0 3px rgba(0,0,0,.65);pointer-events:none;z-index:1}
+.bt div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bt em{font-style:normal;font-weight:400;opacity:.85}
+.rz{position:absolute;right:0;top:0;bottom:0;width:8px;cursor:ew-resize;z-index:2;background:linear-gradient(90deg,transparent 3px,rgba(255,255,255,.75) 3px 5px,transparent 5px)}
+#ghost{position:fixed;z-index:60;background:#111827;color:#fff;font-size:12px;padding:6px 10px;border-radius:6px;pointer-events:none;white-space:nowrap;display:none}
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:60;background:#111827;color:#fff;font-size:13px;padding:8px 8px 8px 14px;border-radius:8px;display:none;align-items:center;gap:12px;max-width:calc(100% - 32px)}
+#toast.on{display:flex}
+#toast .btn{height:28px;font-size:12px;flex-shrink:0}
+.btn:disabled{opacity:.5;cursor:default}
+.sg{position:absolute;top:0;height:100%;border-right:1px solid #fff}
+.lt{background:repeating-linear-gradient(45deg,#DC2626 0 4px,#FCA5A5 4px 8px)!important;border-radius:0 5px 5px 0}
+.sh{position:absolute;top:6px;height:54px;width:2px;background:#111827;z-index:1}
+.sh:after{content:"⚑";position:absolute;top:-5px;left:2px;font-size:13px;color:#111827}
+.np{position:absolute;top:-3px;font-size:12px;color:var(--ok);transform:translateX(-50%);z-index:1;cursor:help}
+.np.bad{color:#DC2626}
+.today{position:absolute;top:0;bottom:0;width:2px;background:var(--primary);z-index:2;pointer-events:none}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);padding:10px 16px;border-bottom:1px solid var(--line)}
+.legend i{display:inline-block;width:14px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:4px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:#fff;padding:0 14px;height:34px;font-weight:600;color:var(--muted)}
+.seg button.on{background:var(--primary-50);color:var(--primary)}
+.drawer.wide{width:min(600px,100%)}
+.chain{display:flex;flex-direction:column;align-items:flex-start}
+.chain div{padding:7px 12px;border-left:3px solid #FCA5A5;background:var(--bad-50);border-radius:6px}
+.chain div:last-child{font-weight:700;color:var(--bad);border-color:#DC2626}
+.chain i{font-style:normal;color:var(--bad);padding:2px 14px}
+.mt{display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:6px}
+.mt>span{width:64px;color:var(--muted);flex-shrink:0}
+.mtk{position:relative;flex:1;height:22px;background:#F3F4F6;border-radius:4px;overflow:hidden}
+.mtk.pl .sg{opacity:.45}
+.mtk.ax{height:16px;background:none;overflow:visible}
+.mtk.ax b{position:absolute;font-size:11px;font-weight:500;color:var(--muted);transform:translateX(-50%);white-space:nowrap}
+.mk{position:absolute;top:0;bottom:0;width:2px;z-index:1}
+.act{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:12px}
+.act .muted{font-size:13px;margin:4px 0 6px}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="app-head">
+    <div class="app-title">
+      <span class="app-icon" style="background:#EAF2FD">📅</span>
+      <div><h1>Quản lý kế hoạch sản xuất</h1><p>Kế hoạch 6 tháng (11/2026 – 04/2027) · theo khách hàng & đơn hàng · 2 xưởng · 15 chuyền</p></div>
+      <div class="actions"><button class="btn">⬇ Xuất Excel</button><button class="btn primary">＋ Xếp đơn mới</button></div>
+    </div>
+    <nav class="tabs">
+      <button class="tab on" data-v="bang">Bảng kế hoạch</button>
+      <button class="tab" data-v="nl">Năng lực chuyền</button>
+      <button class="tab" data-v="lenh">Lệnh sản xuất</button>
+      <button class="tab" data-v="td">Tiến độ hằng ngày</button>
+      <button class="tab" data-v="cb">Cảnh báo trễ <span class="badge b-bad" id="wcount"></span></button>
+    </nav>
+  </header>
+
+  <div class="app-body">
+    <!-- ============ BẢNG KẾ HOẠCH ============ -->
+    <section class="view on" id="bang">
+      <div class="kpis">
+        <div class="kpi"><div class="l">Đơn đang chạy</div><div class="v num" id="k-don"></div><div class="s muted" id="k-lsx"></div></div>
+        <div class="kpi"><div class="l">Chuyền đang dùng</div><div class="v num" id="k-use"></div><div class="s muted">Xem chỗ trống ở tab Năng lực chuyền</div></div>
+        <div class="kpi"><div class="l">Đúng tiến độ</div><div class="v num ok" id="k-ok"></div><div class="s muted" id="k-okp"></div></div>
+        <div class="kpi"><div class="l">Dự kiến trễ</div><div class="v num bad" id="k-late"></div><div class="s muted">Bấm thanh đỏ để xem phương án</div></div>
+      </div>
+      <div class="card">
+        <div class="card-h">
+          <div class="toolbar" style="width:100%">
+            <select class="field" id="fc"><option value="">Tất cả khách hàng</option></select>
+            <div class="seg" id="zoom"><button class="on" data-z="10">Tuần</button><button data-z="3.5">Tháng</button></div>
+            <span class="grow"></span>
+            <span class="muted" style="font-size:12px" id="cnt"></span>
+            <button class="btn sm primary" id="save" disabled>💾 Lưu kế hoạch</button>
+          </div>
+        </div>
+        <div class="legend">
+          <span><i style="background:repeating-linear-gradient(45deg,#F59E0B 0 3px,#FDE68A 3px 6px)"></i>Chờ NPL</span>
+          <span><i style="background:linear-gradient(90deg,#0B6FE0 50%,#0B6FE080 50%)"></i>Sản xuất (cắt → may → hoàn thiện; đậm = đã làm)</span>
+          <span><i style="background:linear-gradient(90deg,#B42318 50%,#B4231880 50%)"></i>Sản xuất – đơn dự kiến trễ</span>
+          <span><i style="background:repeating-linear-gradient(45deg,#DC2626 0 3px,#FCA5A5 3px 6px)"></i>Vượt ngày xuất</span>
+          <span><b style="color:#111827">⚑</b> Ngày xuất hàng</span>
+          <span><b class="ok">▲</b> NPL về kịp · <b class="bad">▲</b> NPL về sau ngày cắt</span>
+          <span><i style="background:var(--primary);width:3px"></i>Hôm nay 06/11</span>
+        </div>
+        <div class="gw" id="gw"><div id="gantt"></div></div>
+      </div>
+      <div class="note">ⓘ Bấm tên khách hàng để thu gọn nhóm · bấm vào thanh để xem chi tiết đơn · kéo thanh để dời lịch, kéo mép phải để đổi số ngày sản xuất · rê chuột lên ▲ để xem từng loại nguyên liệu.</div>
+    </section>
+
+    <!-- ============ NĂNG LỰC CHUYỀN ============ -->
+    <section class="view" id="nl">
+      <div class="toolbar"><select class="field"><option>Tuần 45 (02–08/11)</option></select><select class="field"><option>Cả 2 xưởng · 15 chuyền</option><option>Xưởng 1 · Chuyền 01–08</option><option>Xưởng 2 · Chuyền 09–15</option></select><span class="grow"></span><span class="badge b-info">Tính theo số công nhân × thời gian may chuẩn của mã hàng</span></div>
+      <div class="card">
+        <div class="card-h"><h3>Năng lực từng chuyền</h3><span class="r muted">8 giờ/ngày · 6 ngày/tuần</span></div>
+        <div class="tbl-wrap"><table class="t">
+          <thead><tr><th>Chuyền</th><th class="right">Công nhân</th><th>Đơn đang may</th><th class="right">Năng lực (SP/ngày)</th><th class="right">Kế hoạch giao</th><th>Mức sử dụng</th><th>Khoảng trống</th></tr></thead>
+          <tbody id="cap"></tbody>
+        </table></div>
+      </div>
+    </section>
+
+    <!-- ============ LỆNH SẢN XUẤT ============ -->
+    <section class="view" id="lenh">
+      <div class="card">
+        <div class="card-h">
+          <div class="toolbar" style="width:100%">
+            <select class="field"><option>Tất cả xưởng</option><option>Xưởng 1</option><option>Xưởng 2</option></select>
+            <select class="field"><option>Tất cả trạng thái</option><option>Đang may</option><option>Chờ nguyên liệu</option></select>
+            <span class="muted" style="font-size:12px" id="lcnt"></span>
+            <span class="grow"></span>
+            <input class="field search" placeholder="Tìm mã lệnh, mã hàng, PO…">
+            <button class="btn primary sm">＋ Ra lệnh sản xuất</button>
+          </div>
+        </div>
+        <div class="tbl-wrap"><table class="t">
+          <thead><tr><th>Mã lệnh</th><th>PO</th><th>Mã hàng</th><th>Khách hàng</th><th>Chuyền</th><th class="right">Số lượng</th><th>Nguyên liệu</th><th>Đã may</th><th>Ngày xuất</th></tr></thead>
+          <tbody id="orders"></tbody>
+        </table></div>
+      </div>
+      <div class="note">ⓘ Bấm vào một lệnh để xem chi tiết đơn hàng và tiến độ từng khâu.</div>
+    </section>
+
+    <!-- ============ TIẾN ĐỘ HẰNG NGÀY ============ -->
+    <section class="view" id="td">
+      <div class="toolbar"><select class="field"><option>Hôm nay – T6 06/11</option></select><select class="field"><option>Cả 2 xưởng · 15 chuyền</option><option>Xưởng 1 · Chuyền 01–08</option><option>Xưởng 2 · Chuyền 09–15</option></select><span class="grow"></span><span class="badge b-info">Sản lượng tự về từ chuyền · cập nhật 10:00</span></div>
+      <div class="grid2">
+        <div class="card">
+          <div class="card-h"><h3>Thực tế so với kế hoạch — hôm nay</h3></div>
+          <div class="tbl-wrap"><table class="t">
+            <thead><tr><th>Chuyền</th><th>Mã hàng · PO</th><th class="right">Kế hoạch</th><th class="right">Thực tế</th><th>Đạt</th><th class="right">Lệch</th></tr></thead>
+            <tbody id="daily"></tbody>
+          </table></div>
+        </div>
+        <div class="card">
+          <div class="card-h"><h3>Theo giờ — Chuyền 03 · VAY-XOE-1105</h3><span class="r muted">KH 125 SP/giờ</span></div>
+          <div class="list">
+            <div class="li"><div style="flex:1">7–8 giờ</div><div class="bar ok" style="flex:2"><i style="width:90%"></i></div><b class="num">112</b></div>
+            <div class="li"><div style="flex:1">8–9 giờ</div><div class="bar warn" style="flex:2"><i style="width:79%"></i></div><b class="num">99</b></div>
+            <div class="li"><div style="flex:1">9–10 giờ</div><div class="bar bad" style="flex:2"><i style="width:71%"></i></div><b class="num">89</b></div>
+            <div class="li"><div style="flex:1">10–11 giờ</div><div class="bar" style="flex:2"><i style="width:20%"></i></div><b class="num muted">đang may</b></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ CẢNH BÁO TRỄ ============ -->
+    <section class="view" id="cb">
+      <div class="card">
+        <div class="card-h"><h3>Đơn có nguy cơ trễ</h3><span class="r muted">Cập nhật mỗi sáng từ sản lượng thực tế & lịch về NPL</span></div>
+        <div class="list" id="wl"></div>
+      </div>
+      <div class="card">
+        <div class="card-h"><h3>Thông báo đã gửi khi đổi kế hoạch</h3></div>
+        <div class="list" id="nt">
+          <div class="li"><span class="avatar">C</span><div style="flex:1"><b>Tổ cắt</b> — Đổi thứ tự cắt PO BM-7731 lên trước PO KZ-3312<div class="muted">05/11 16:20 · Đã xem</div></div></div>
+          <div class="li"><span class="avatar">K</span><div style="flex:1"><b>Kho</b> — Cấp vải PO KZ-3305 sớm 1 ngày (05/11)<div class="muted">04/11 16:20 · Đã xem</div></div></div>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- Ngăn chi tiết (đơn hàng / cảnh báo) -->
+<aside class="drawer" id="drawer">
+  <div class="drawer-h"><span class="app-icon" id="d-ic" style="background:#EAF2FD">📋</span><div><h3 id="d-name"></h3><div class="muted" id="d-sub"></div></div><button class="x" onclick="closeD()">×</button></div>
+  <div class="drawer-b" id="d-b"></div>
+</aside>
+<div class="drawer-bg" id="dbg" onclick="closeD()"></div>
+<div id="ghost"></div>
+<div id="toast" role="status"><span id="t-msg"></span><button class="btn sm" id="t-undo" style="color:var(--ink)">↺ Hoàn tác</button></div>
+
+<script>
+const K = ["Nordvik Outdoor (Thụy Điển)","Bellmont Apparel (Mỹ)","Kazeyama Sports (Nhật)","Coral Bay Clothing (Úc)","Hanbit Urban (Hàn Quốc)","Northline Wear (Canada)"];
+// Ngày tính từ T2 02/11/2026 (= 0). Hôm nay 06/11 = 4.
+// [PO, khách, mã hàng, SL, giá USD/sp, ngày bắt đầu cắt, [số ngày cắt, may, hoàn thiện], ngày xuất, NPL [[tên, ngày về]], LSX [[chuyền, SL, % đã may]], % [cắt, may, hoàn thiện]]
+const O = [
+  ["NV-4471",0,"AO-POLO-2611",24000,6.2,4,[3,12,3],25,[["Vải pique 220g",10],["Cúc 4 lỗ",3],["Nhãn chính",2]],[[5,6000,0],[5,6000,0],[6,6000,0],[6,6000,0]],[0,0,0]],
+  ["NV-4475",0,"AO-KHOAC-1150",15000,14.5,-12,[4,16,4],25,[["Vải dù 2 lớp",-15],["Khóa kéo YKK",-10]],[[4,5000,100],[4,5000,100],[4,5000,25]],[100,75,30]],
+  ["NV-4490",0,"QUAN-SHORT-0715",13200,5.8,-8,[4,13,4],22,[["Vải kaki 2 chiều",-12],["Nhãn dệt",-9]],[[13,6600,100],[13,6600,20]],[99,60,25]],
+  ["NV-4512",0,"AO-POLO-2611",36000,6.2,44,[4,18,4],85,[["Vải pique 220g",40],["Cúc 4 lỗ",38]],[[5,9000,0],[5,9000,0],[6,9000,0],[6,9000,0]],[0,0,0]],
+  ["BM-7720",1,"QUAN-KAKI-0932",30000,8.4,-10,[5,30,5],28,[["Vải kaki 98/2",-14],["Cúc 15mm (thiếu 8.000)",10]],[[2,7500,40],[2,7500,0],[9,7500,40],[9,7500,0]],[100,20,0]],
+  ["BM-7731",1,"SOMI-NU-1210",20000,7.1,-3,[5,11,4],30,[["Vải poplin",-6],["Cúc ngọc trai",-4]],[[7,5000,30],[7,5000,0],[14,5000,30],[14,5000,0]],[88,15,0]],
+  ["BM-7745",1,"AO-POLO-2611",40000,5.9,60,[5,14,4],112,[["Vải pique 220g",55],["Cúc 4 lỗ",52]],[[1,14000,0],[3,13000,0],[4,13000,0]],[0,0,0]],
+  ["BM-7760",1,"QUAN-KAKI-0932",28000,8.4,120,[5,14,4],165,[["Vải kaki 98/2",112]],[[2,7000,0],[2,7000,0],[9,7000,0],[9,7000,0]],[0,0,0]],
+  ["KZ-3305",2,"VAY-XOE-1105",14000,11.8,-3,[4,17,4],19,[["Vải voan",-6],["Ren trang trí",-4]],[[3,7000,34],[3,7000,0]],[92,17,0]],
+  ["KZ-3312",2,"SOMI-NU-1210",13000,9.2,-1,[4,13,4],30,[["Vải lụa pha",-3]],[[8,6500,16],[8,6500,0]],[100,8,0]],
+  ["KZ-3330",2,"SOMI-NU-1210",18000,9.2,35,[4,9,4],70,[["Vải lụa pha",30]],[[7,4500,0],[7,4500,0],[8,4500,0],[8,4500,0]],[0,0,0]],
+  ["KZ-3341",2,"VAY-XOE-1105",12000,11.8,98,[4,13,4],135,[["Vải voan",92],["Ren trang trí",94]],[[3,6000,0],[3,6000,0]],[0,0,0]],
+  ["CB-5108",3,"AO-THUN-2402",16000,3.6,-14,[4,16,3],12,[["Vải cotton 4 chiều",-18]],[[1,8000,100],[1,8000,70]],[100,85,60]],
+  ["CB-5120",3,"AO-THUN-2402",22000,3.6,-4,[4,11,3],26,[["Vải cotton 4 chiều",-7]],[[10,5500,76],[10,5500,0],[12,5500,68],[12,5500,0]],[95,36,8]],
+  ["CB-5133",3,"QUAN-SHORT-0715",26000,5.2,70,[5,13,4],108,[["Vải kaki 2 chiều",64]],[[10,6500,0],[10,6500,0],[12,6500,0],[12,6500,0]],[0,0,0]],
+  ["CB-5150",3,"AO-THUN-2402",38000,3.4,140,[5,13,4],178,[["Vải cotton 4 chiều",133]],[[10,13000,0],[12,13000,0],[13,12000,0]],[0,0,0]],
+  ["HB-6610",4,"QUAN-SHORT-0715",12000,5.0,-10,[3,12,3],10,[["Vải kaki 2 chiều",-13]],[[5,6000,100],[5,6000,80]],[100,90,55]],
+  ["HB-6622",4,"AO-KHOAC-1150",16800,15.0,-6,[5,18,5],32,[["Vải dù 2 lớp",-9],["Khóa kéo YKK",-8]],[[11,8400,54],[11,8400,0]],[83,27,5]],
+  ["HB-6650",4,"AO-KHOAC-1150",34000,15.0,95,[5,20,5],129,[["Vải dù 2 lớp",104],["Khóa kéo YKK",96]],[[11,8500,0],[11,8500,0],[13,8500,0],[13,8500,0]],[0,0,0]],
+  ["NL-8801",5,"QUAN-KAKI-0932",13000,8.0,-11,[4,14,3],14,[["Vải kaki 98/2",-14]],[[6,6500,100],[6,6500,50]],[100,75,50]],
+  ["NL-8815",5,"QUAN-KAKI-0932",20000,8.0,2,[5,20,4],45,[["Vải kaki 98/2",-1],["Cúc 15mm",1]],[[15,7000,0],[15,7000,0],[15,6000,0]],[46,0,0]],
+  ["NL-8830",5,"AO-KHOAC-1150",36000,16.5,120,[6,20,5],175,[["Vải dù 2 lớp",113],["Khóa kéo YKK",115]],[[14,9000,0],[14,9000,0],[15,9000,0],[15,9000,0]],[0,0,0]],
+];
+// Cảnh báo: [ngắn gọn, tiêu đề phương án, kết quả, đánh đổi]
+const W = [
+  {o:8, q:14000, why:"Mã hàng mới, Chuyền 03 mới đạt 81% năng suất",
+   chain:["Mã hàng mới VAY-XOE-1105, công nhân chưa quen","Chuyền 03 đạt 810/1.000 SP/ngày, 3 ngày liền","May kéo dài 17 ngày (kế hoạch 14)","Trễ xuất 3 ngày (21/11 → 24/11)"],
+   acts:[["Thêm thợ","Tăng cường 4 thợ lành nghề từ Chuyền 01 (xong may 07/11)","Kịp xuất 21/11","Chuyền 01 nhận đơn mới chậm 2 ngày"],
+         ["Tăng ca","Tăng ca Chủ nhật 08/11 và 15/11 cho Chuyền 03","Còn trễ 1 ngày","Chi phí tăng ca ~38 triệu đ"],
+         ["Xuất từng phần","Xuất 10.500 sp ngày 21/11, 3.500 sp ngày 24/11","Không bị phạt phần lớn","Cần khách đồng ý, thêm 1 lô hàng lẻ (LCL)"]]},
+  {o:4, q:8000, why:"Thiếu 8.000 cúc 15mm, nhà cung cấp giao 12/11",
+   chain:["Cúc 15mm về trễ 12/11 (cần từ 03/11)","Chuyền 02, 09 may được thân, chờ đính cúc","Hoàn thiện dồn vào cuối đơn","Trễ xuất 2 ngày (30/11 → 02/12)"],
+   acts:[["Đổi thứ tự màu","May trước màu Be (đủ cúc), dời màu Xanh than sau 12/11","Kịp xuất 30/11","Tổ cắt phải đổi thứ tự bàn cắt 2 ngày"],
+         ["Mua cúc nội địa","Mua 8.000 cúc của nhà cung cấp trong nước, giao 09/11","Kịp xuất 30/11","Giá cao hơn 35% (~6 triệu đ), cần khách duyệt mẫu cúc"],
+         ["Tăng ca","Tăng ca 2 giờ × 6 ngày cho Chuyền 02, 09","Còn trễ 1 ngày","Chi phí ~52 triệu đ"]]},
+  {o:0, q:24000, why:"Vải pique 220g về trễ 6 ngày (nhà cung cấp lùi tàu)",
+   chain:["Vải pique về 12/11 (kế hoạch 06/11)","Cắt bắt đầu muộn 6 ngày → 12/11","May Chuyền 05, 06 dồn 12 ngày liên tục","Trễ xuất 3 ngày (27/11 → 30/11)"],
+   acts:[["Chuyển chuyền","Chuyển 6.000 sp sang Chuyền 07 (trống từ 15/11)","Kịp xuất 27/11","Chuyền 07 đổi mã hàng, 3 ngày đầu năng suất ~80%"],
+         ["Tăng ca","Tăng ca 2 giờ × 10 ngày cho Chuyền 05, 06","Kịp xuất 27/11","Chi phí ~86 triệu đ; công nhân đã tăng ca 28 giờ/tháng"],
+         ["Xuất từng phần","Xuất 18.000 sp đúng 27/11, 6.000 sp ngày 30/11","Phạt chỉ tính trên 6.000 sp","Cần khách đồng ý, thêm 1 lần đặt container"]]},
+  {o:18, q:34000, why:"Nhà cung cấp vải nghỉ Tết, vải dù về 14/02/2027",
+   chain:["Vải dù 2 lớp về 14/02 (kế hoạch cắt 05/02)","Cắt lùi 9 ngày sau Tết","May Chuyền 11, 13 dồn, công nhân về muộn sau Tết","Trễ xuất 5 ngày (11/03 → 16/03)"],
+   acts:[["Đặt vải sớm","Đặt vải đi tàu trước Tết, về 28/01/2027","Kịp xuất 11/03","Ứng tiền vải sớm 3 tuần ~2,1 tỷ đ, tồn kho thêm 18.000 m"],
+         ["Thêm chuyền","Thêm Chuyền 14 may song song 3 tuần","Kịp xuất 11/03","Dời đơn NL-8830 trên Chuyền 14 lùi 5 ngày (vẫn kịp)"],
+         ["Lùi ngày xuất","Đàm phán với khách lùi ngày xuất sang 16/03","Không bị phạt","Khách có thể giảm đơn mùa sau"]]},
+];
+const PH = [["Chờ NPL","#F59E0B"],["Cắt","#38BDF8"],["May","#0B6FE0"],["Hoàn thiện","#7C3AED"]];
+const ST = {ok:["Đúng tiến độ","b-ok","ok"],warn:["Chờ NPL","b-warn","warn"],late:["Dự kiến trễ","b-bad","bad"],plan:["Chưa bắt đầu","b-gray","muted"]};
+const N = 182, TODAY = 4, LW = 250, RATE = 25400, $ = id => document.getElementById(id);
+const f = n => Math.round(n).toLocaleString("vi-VN");
+const ty = usd => (usd*RATE/1e9).toLocaleString("vi-VN",{maximumFractionDigits:1})+" tỷ đ";
+const p2 = n => String(n).padStart(2,"0");
+const dt = (d,y) => { const x = new Date(2026,10,2+d); return p2(x.getDate())+"/"+p2(x.getMonth()+1)+(y?"/"+x.getFullYear():""); };
+const ln = n => "Chuyền "+p2(n);
+let code = 2611;
+function calc(o){
+  o.w = o[10][0] ? 0 : Math.max(0, o.npl-o[5]);          // chỉ chờ NPL khi chưa cắt
+  o.ss = o[5]+o.w+o[6][0]; o.se = o.ss+o[6][1]; o.end = o.se+o[6][2];
+  o.late = Math.max(0, o.end-o[7]);
+  o.st = o.late ? "late" : o.w ? "warn" : o[5]>TODAY ? "plan" : "ok";
+  o.lab = o.late ? "Trễ "+o.late+" ngày" : ST[o.st][0];
+}
+O.forEach(o=>{
+  o.npl = Math.max(...o[8].map(m=>m[1]));
+  calc(o);
+  o[9].forEach(l=>l[3]="LSX-"+code++);
+  o.lines = "Chuyền "+[...new Set(o[9].map(l=>p2(l[0])))].join(", ");
+  o.done = o[9].reduce((s,l)=>s+l[1]*l[2]/100,0);
+  o.pct = Math.round(o[6].reduce((s,d,k)=>s+d*o[10][k],0)/o[6].reduce((s,d)=>s+d,0));   // % sản xuất, gộp 3 khâu theo số ngày
+});
+console.assert(O.filter(o=>o.late).length===W.length && W.every(w=>O[w.o].late>0), "cảnh báo khớp đơn trễ");
+console.assert(O.length===22 && O.reduce((s,o)=>s+o[9].length,0)===68, "22 đơn · 68 LSX");
+console.assert(O.every(o=>o[9].reduce((s,l)=>s+l[1],0)===o[3] && o[9].every(l=>l[0]>=1&&l[0]<=15)), "LSX cộng đúng SL đơn, chỉ Chuyền 01–15");
+
+function segs(o){ const s=[]; let x=o[5]; if(o.w){ s.push([0,x,o.w,100]); x+=o.w; } o[6].forEach((d,k)=>{ s.push([k+1,x,d,o[10][k]]); x+=d; }); return s; }
+const bg = (k,p) => k ? `linear-gradient(90deg,${PH[k][1]} ${p}%,${PH[k][1]}80 ${p}%)` : "repeating-linear-gradient(45deg,#F59E0B 0 4px,#FDE68A 4px 8px)";
+const segH = (s,x0,px,u="px") => s.map(([k,x,d,p])=>`<i class="sg" style="left:${(x-x0)*px}${u};width:${d*px}${u};background:${bg(k,p)}" title="${PH[k][0]}: ${dt(x)} – ${dt(x+d-1)}${k?" · "+p+"%":""}"></i>`).join("");
+
+// ---------- Bảng kế hoạch ----------
+// Thanh gộp 1 đoạn "Sản xuất" (+ chờ NPL phía trước, + đuôi trễ), chữ nằm trong thanh
+const tip = o => `Order: ${o[0]} · ${f(o[3])} sp · đã làm ${o.pct}%${o.late?` · Dự kiến trễ ${o.late} ngày`:""}\nLSX: ${o[9].map(l=>l[3].slice(4)).join(", ")} · Chuyền: ${o.lines.slice(7)} · Xuất: ${dt(o[7])} · NPL về: ${dt(o.npl)}\nSản xuất: ${dt(o[5]+o.w)} – ${dt(o.end-1)}${o.w?` (chờ NPL ${o.w} ngày)`:""}`;
+function barIn(o,px){
+  const c = o.late ? "#B42318" : "#0B6FE0", x = o.w*px;
+  return (o.w?`<i class="sg" style="left:0;width:${x}px;background:${bg(0)}"></i>`:"")
+    + `<i class="sg" style="left:${x}px;width:${(o.end-o[5]-o.w)*px}px;background:linear-gradient(90deg,${c} ${o.pct}%,${c}80 ${o.pct}%)"></i>`
+    + (o.late?`<i class="sg lt" style="left:${(o[7]-o[5])*px}px;width:${o.late*px}px"></i>`:"")
+    + `<div class="bt" style="padding-left:${Math.max(0,-o[5]*px)+7}px"><div><em>Order:</em> ${o[0]} · ${f(o[3])} sp · ${o.pct}%${o.late?` · ⚠ Trễ ${o.late} ngày`:""}</div>`
+    + `<div><em>LSX:</em> ${o[9].map(l=>l[3].slice(4)).join(", ")} · <em>Chuyền:</em> ${o.lines.slice(7)} · <em>Xuất:</em> ${dt(o[7])} · <em>NPL về:</em> ${dt(o.npl)}${o.w?" ⚠":""}</div></div>`
+    + `<i class="rz"></i>`;
+}
+let PX = 10;
+$("fc").innerHTML += K.map((k,i)=>`<option value="${i}">${k}</option>`).join("");
+function board(){
+  const px=PX, W0=N*px, fc=$("fc").value;
+  const grid = `width:${W0}px;background-image:repeating-linear-gradient(90deg,transparent 0 ${7*px-1}px,#EEF0F3 ${7*px-1}px ${7*px}px)`;
+  let h = `<div class="gr gh"><div class="c1">Khách hàng / PO</div><div class="c2">Mã hàng</div><div class="tk" style="width:${W0}px">`;
+  for (let d=0; d<N; d++){ const x=new Date(2026,10,2+d);
+    if (d===0 || x.getDate()===1) h += `<span class="mo" style="left:${d*px}px">Tháng ${x.getMonth()+1}/${x.getFullYear()}</span>`;
+    if (d%7===0) h += `<span class="wk" style="left:${d*px}px">${px>5 ? dt(d) : (45+d/7-1)%53+1}</span>`; }
+  h += `</div></div>`;
+  let shown = 0;
+  K.forEach((k,ci)=>{ if (fc!=="" && +fc!==ci) return;
+    const os = O.map((o,i)=>[o,i]).filter(([o])=>o[1]===ci), nl = os.filter(([o])=>o.late).length;
+    const a = Math.min(...os.map(([o])=>o[5])), e = Math.max(...os.map(([o])=>o.end));
+    shown += os.length;
+    h += `<div class="grp"><div class="gr gg" onclick="this.parentNode.classList.toggle('off')"><div class="c1"><b><span class="car">▾</span> ${k}</b><small>${os.length} đơn · ${f(os.reduce((s,[o])=>s+o[3],0))} sp${nl?` · <span class="bad">${nl} đơn trễ</span>`:""}</small></div><div class="tk" style="${grid}"><i class="gs" style="left:${a*px}px;width:${(e-a)*px}px"></i></div></div>`;
+    os.forEach(([o,i])=>{
+      h += `<div class="gr go"><div class="c1"><b>${o[0]}</b><small class="${ST[o.st][2]}">${o.lab}</small></div><div class="c2"><b>${o[2]}</b><small>${f(o[3])} sp</small></div><div class="tk" style="${grid}">
+        <div class="gb" data-i="${i}" style="left:${o[5]*px}px;width:${(o.end-o[5])*px}px" title="${tip(o)}">${barIn(o,px)}</div>
+        <i class="sh" style="left:${o[7]*px}px" title="Ngày xuất hàng ${dt(o[7],1)}"></i>
+        <span class="np ${o.npl>o[5]?"bad":""}" style="left:${o.npl*px}px" title="${o[8].map(m=>m[0]+": về "+dt(m[1])).join("\n")}">▲</span></div></div>`; });
+    h += `</div>`; });
+  h += `<i class="today" style="left:${LW+(TODAY+.5)*px}px"></i>`;
+  $("gantt").innerHTML = h; $("gantt").style.width = LW+W0+"px";
+  $("cnt").textContent = `${shown} đơn · ${N/7} tuần`;
+}
+$("fc").onchange = board;
+$("zoom").querySelectorAll("button").forEach(b=>b.onclick=()=>{
+  $("zoom").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));
+  PX = +b.dataset.z; board(); $("gw").scrollLeft = 0; });
+board();
+$("wcount").textContent = W.length;
+const nO = O.length, nLSX = O.reduce((s,o)=>s+o[9].length,0);
+$("k-don").textContent = nO; $("k-lsx").textContent = `${nLSX} lệnh sản xuất · ${K.length} khách hàng`;
+function kpis(){ const nLate = O.filter(o=>o.late).length;
+  $("k-late").textContent = nLate; $("k-ok").textContent = nO-nLate; $("k-okp").textContent = Math.round((nO-nLate)/nO*100)+"% số đơn"; }
+kpis();
+
+// ---------- Kéo thả thanh: dời lịch / kéo mép phải đổi số ngày may ----------
+let drag = null, tt = 0; const undo = [];
+const verdict = o => (o.late ? `Trễ ${o.late} ngày (xuất ${dt(o[7])})` : "Kịp xuất") + (o.w ? ` · ⚠ chờ NPL ${o.w} ngày (về ${dt(o.npl)})` : "");
+function toast(msg, canUndo){
+  $("t-msg").textContent = msg; $("t-undo").style.display = canUndo ? "" : "none";
+  $("toast").classList.add("on"); clearTimeout(tt); tt = setTimeout(()=>$("toast").classList.remove("on"), 7000);
+}
+function changed(){ board(); kpis(); orders(); wl(); $("save").disabled = !undo.length; }
+$("gantt").addEventListener("pointerdown", e=>{
+  const b = e.target.closest(".gb"); if (!b || e.button) return;
+  const o = O[b.dataset.i];
+  drag = {b, o, i:+b.dataset.i, x:e.clientX, rz:e.target.classList.contains("rz"), s0:o[5], m0:o[6][1], e0:o.end, dd:0, moved:false};
+});
+addEventListener("pointermove", e=>{
+  const g = drag; if (!g) return; const o = g.o, dx = e.clientX-g.x;
+  if (!g.moved){ if (Math.abs(dx)<4) return; g.moved = true; g.b.classList.add("drag"); }
+  let d = Math.round(dx/PX);                                    // bắt theo ngày
+  d = g.rz ? Math.min(Math.max(d, 1-g.m0), N-g.e0) : Math.min(Math.max(d, Math.min(g.s0,0)-g.s0), N-g.e0);
+  if (d!==g.dd){ g.dd = d;
+    if (g.rz) o[6][1] = g.m0+d; else o[5] = g.s0+d;
+    calc(o); g.b.style.left = o[5]*PX+"px"; g.b.style.width = (o.end-o[5])*PX+"px"; g.b.innerHTML = barIn(o,PX); }
+  const gh = $("ghost"); gh.textContent = `${o[0]}: ${dt(o[5])} – ${dt(o.end-1)} · ${verdict(o)}`;
+  gh.style.display = "block"; gh.style.left = Math.min(e.clientX+14, innerWidth-gh.offsetWidth-8)+"px"; gh.style.top = e.clientY+18+"px";
+});
+addEventListener("pointerup", ()=>{
+  const g = drag; if (!g) return; drag = null; $("ghost").style.display = "none";
+  if (!g.moved) return openD(g.i);                              // < 4px = bấm mở chi tiết
+  if (!g.dd) return board();
+  undo.push([g.i, g.s0, g.m0]); changed();
+  toast(`Đã ${g.rz?"đổi":"dời"} ${g.o[0]} ${g.rz?"thành":"sang"} ${dt(g.o[5])} – ${dt(g.o.end-1)} · ${verdict(g.o)}`, true);
+});
+addEventListener("pointercancel", ()=>{
+  const g = drag; if (!g) return; drag = null; $("ghost").style.display = "none";
+  if (g.moved){ g.o[5] = g.s0; g.o[6][1] = g.m0; calc(g.o); board(); }
+});
+$("t-undo").onclick = ()=>{ const u = undo.pop(); if (!u) return; const o = O[u[0]];
+  o[5] = u[1]; o[6][1] = u[2]; calc(o); changed(); toast(`Đã hoàn tác ${o[0]}: ${dt(o[5])} – ${dt(o.end-1)} · ${verdict(o)}`, undo.length>0); };
+$("save").onclick = ()=>{ undo.length = 0; $("save").disabled = true; toast("Đã lưu kế hoạch · đã báo Tổ cắt, Kho và các chuyền liên quan", false); };
+{ // tự kiểm: NV-4471 (NPL về 12/11) dời cắt 06/11 → 14/11: hết chờ NPL, xong 02/12 > xuất 27/11 → trễ 5 ngày
+  const o = O[0], s = o[5]; o[5] = 12; calc(o);
+  console.assert(o.w===0 && o.end===30 && o.late===5 && o.st==="late", "kéo thả tính lại ngày xong & trễ");
+  o[5] = s; calc(o); console.assert(o.w===6 && o.late===3, "khôi phục NV-4471");
+}
+
+// ---------- Lệnh sản xuất ----------
+const nplB = o => o.npl<=TODAY ? '<span class="badge b-ok">✓ Đủ</span>' : `<span class="badge ${o.npl>o[5]?"b-bad":"b-info"}">${o.npl>o[5]?"⚠ ":""}Về ${dt(o.npl)}</span>`;
+const orders = () => $("orders").innerHTML = O.flatMap((o,i)=>o[9].map(l=>`<tr class="click" onclick="openD(${i})"><td><b>${l[3]}</b></td><td>${o[0]}</td><td>${o[2]}</td><td>${K[o[1]]}</td><td>${ln(l[0])}</td><td class="right num">${f(l[1])}</td><td>${nplB(o)}</td>
+  <td><div style="display:flex;gap:8px;align-items:center"><div class="bar ${l[2]>=80?"ok":""}" style="flex:1"><i style="width:${l[2]}%"></i></div><span class="num">${l[2]}%</span></div></td>
+  <td>${dt(o[7],1)} ${o.late?`<span class="badge b-bad">trễ ${o.late} ngày</span>`:""}</td></tr>`)).join("");
+orders();
+$("lcnt").textContent = `${nLSX} lệnh của ${nO} đơn`;
+
+// ---------- Năng lực chuyền (15 chuyền: Xưởng 1 = 01–08, Xưởng 2 = 09–15) ----------
+const L = [45,44,46,43,47,44,48,45,46,44,42,45,44,47,45];   // tổng 675 công nhân may
+const CAP = [[1060,1040],[1040,1000],[1000,1000],[1000,980],[1080,1060],[1040,1020],[1100,1080],[1060,1040],[1070,1050],[1040,1020],[1000,980],[1060,1040],[1040,1020],[1090,1060],[1050,0]];
+const onL = n => O.filter(o=>o[9].some(l=>l[0]===n));
+const cur = n => onL(n).filter(o=>o.ss<=TODAY && o.se>TODAY);
+const nUse = L.filter((_,i)=>cur(i+1).length).length;
+$("k-use").textContent = `${nUse}/${L.length}`;
+console.assert(L.length===15 && CAP.length===15 && nUse===14 && L.reduce((s,x)=>s+x,0)===675, "15 chuyền, 14 đang may");
+$("cap").innerHTML = L.map((w,i)=>{ const n=i+1, c=CAP[i], p=Math.round(c[1]/c[0]*100), cls=p>100?"bad":p>=90?"ok":"warn", cu=cur(n);
+  const e = cu.length ? Math.max(...cu.map(o=>o.se)) : TODAY, nx = Math.min(...onL(n).filter(o=>o.ss>=e).map(o=>o.ss));
+  const free = nx-e>1 ? `${dt(e)} → ${nx<N?dt(nx-1):"…"}` : "—";
+  return `<tr><td><b>${ln(n)}</b></td><td class="right">${w}</td><td>${cu.map(o=>o[2]+" · "+o[0]).join(", ")||"—"}</td><td class="right num">${f(c[0])}</td><td class="right num">${f(c[1])}</td>
+  <td><div style="display:flex;gap:8px;align-items:center"><div class="bar ${cls}" style="flex:1"><i style="width:${Math.min(p,100)}%"></i></div><span class="num">${p}%</span></div></td>
+  <td>${free==="—"?'<span class="muted">—</span>':`<span class="badge b-info">${free}</span>`}</td></tr>`; }).join("");
+
+// ---------- Tiến độ hằng ngày ----------
+const D = [[1,1040,1052],[2,1000,760],[3,1000,810],[4,980,962],[5,1060,1041],[6,1020,998],[7,1080,1096],[8,1040,1003],[9,1050,1012],[10,1020,1034],[11,980,941],[12,1040,1031],[13,1020,978],[14,1060,1048]];
+console.assert(D.every(d=>CAP[d[0]-1][1]===d[1] && cur(d[0]).length), "kế hoạch ngày khớp năng lực chuyền");
+$("daily").innerHTML = D.map(d=>{ const p=Math.round(d[2]/d[1]*100), cls=p>=95?"ok":p>=85?"warn":"bad", o=cur(d[0])[0];
+  return `<tr><td>${ln(d[0])}</td><td>${o?o[2]+" · "+o[0]:"—"}</td><td class="right num">${f(d[1])}</td><td class="right num"><b>${f(d[2])}</b></td>
+  <td><div class="bar ${cls}"><i style="width:${Math.min(p,100)}%"></i></div></td><td class="right num ${cls}">${d[2]-d[1]>0?"+":""}${f(d[2]-d[1])}</td></tr>`; }).join("");
+
+// ---------- Ngăn chi tiết ----------
+function show(ic, title, sub, body, wide){
+  $("d-ic").textContent = ic; $("d-name").textContent = title; $("d-sub").innerHTML = sub; $("d-b").innerHTML = body;
+  $("drawer").classList.toggle("wide", !!wide); $("d-b").scrollTop = 0;
+  $("drawer").classList.add("on"); $("dbg").classList.add("on");
+}
+function closeD(){ $("drawer").classList.remove("on"); $("dbg").classList.remove("on"); }
+const row = (a,b) => `<div class="r"><span>${a}</span><b>${b}</b></div>`;
+const pbar = (p,cls="") => `<div class="bar ${p===100?"ok":cls}" style="flex:1;margin:6px 10px"><i style="width:${p}%"></i></div><b class="num">${p}%</b>`;
+
+function openD(i){
+  const o=O[i], s=ST[o.st], k=W.findIndex(w=>w.o===i), v=o[3]*o[4];
+  show("📋", `PO ${o[0]} · ${o[2]}`, `${K[o[1]]} · <span class="badge ${s[1]}">${o.late?"Dự kiến trễ "+o.late+" ngày":s[0]}</span>`, `
+    <div class="kpi" style="background:${o.late?"var(--bad-50)":"var(--primary-50)"};border-color:transparent"><div class="l">Ngày xuất hàng</div><div class="v">${dt(o[7],1)}</div>
+      <div class="s ${o.late?"bad":"ok"}">${o.late?`Dự kiến xuất ${dt(o.end,1)} — trễ ${o.late} ngày`:`Dự kiến xong ${dt(o.end-1)} — ${o[7]>o.end?"dư "+(o[7]-o.end)+" ngày":"vừa kịp"}`}</div></div>
+    <div class="sec">Thông tin đơn</div>
+    <div class="rows">${row("Khách hàng",K[o[1]])}${row("Mã hàng",o[2])}${row("Số lượng",f(o[3])+" sp")}${row("Giá trị",`$${f(v)} (~${ty(v)})`)}${row("Chuyền đang làm",o.lines)}${row("Đã may",`${f(o.done)} sp (${Math.round(o.done/o[3]*100)}%)`)}</div>
+    <div class="sec">Tiến độ từng khâu</div>
+    <div class="rows">${segs(o).map(([k,x,d,p])=>`<div class="r"><span style="width:120px">${PH[k][0]}<small class="muted" style="display:block">${dt(x)} – ${dt(x+d-1)}</small></span>${k?pbar(p):`<span class="badge b-warn">Chờ ${d} ngày</span>`}</div>`).join("")}</div>
+    <div class="sec">Ngày nguyên liệu về</div>
+    <div class="rows">${o[8].map(m=>`<div class="r"><span>${m[0]}</span><span>${dt(m[1])} ${m[1]>o[5]?`<span class="badge b-bad">Sau ngày cắt ${m[1]-o[5]} ngày</span>`:m[1]<=TODAY?'<span class="badge b-ok">Đã về</span>':'<span class="badge b-info">Kịp ngày cắt</span>'}</span></div>`).join("")}</div>
+    <div class="sec">Lệnh sản xuất (${o[9].length})</div>
+    <div class="rows">${o[9].map(l=>`<div class="r"><span style="width:150px"><b>${l[3]}</b><small class="muted" style="display:block">${ln(l[0])} · ${f(l[1])} sp</small></span>${pbar(l[2])}</div>`).join("")}</div>
+    <div class="sec">Rủi ro</div>
+    ${k>=0?`<div class="muted"><b class="bad">⚠ ${W[k].why}</b> → trễ ${o.late} ngày.</div><button class="btn primary" onclick="openW(${k})">Xem nguyên nhân & phương án</button>`
+      : `<div class="muted">${o.w?`Chờ nguyên liệu ${o.w} ngày nhưng vẫn kịp ngày xuất.`:"Không có rủi ro đáng kể."}</div><button class="btn">Đổi chuyền / tăng ca</button>`}`);
+}
+
+function openW(k){
+  const w=W[k], o=O[w.o], v=w.q*o[4], pen=o[3]*o[4]*.005*o.late;
+  const x0=Math.min(o[5],TODAY)-2, x1=o.end+3, px=100/(x1-x0), at=d=>`left:${(d-x0)*px}%`;
+  const plan=[[1,o[5],o[6][0],100],[2,o[5]+o[6][0],o[7]-o[5]-o[6][0]-o[6][2],100],[3,o[7]-o[6][2],o[6][2],100]];
+  const mk=`<i class="mk" style="${at(o[7])};background:#111827"></i><i class="mk" style="${at(TODAY+.5)};background:var(--primary)"></i>`;
+  show("⚠", `Cảnh báo trễ · PO ${o[0]}`, `${K[o[1]]} · <span class="badge b-bad">Dự kiến trễ ${o.late} ngày</span>`, `
+    <div class="sec">Đơn bị ảnh hưởng</div>
+    <div class="rows">${row("PO / Mã hàng",`<a href="#" onclick="openD(${w.o});return false">${o[0]} · ${o[2]} ›</a>`)}${row("Lệnh sản xuất",o[9].map(l=>l[3]).join(", "))}${row("Chuyền",o.lines)}${row("Ngày xuất",`${dt(o[7],1)} → <span class="bad">${dt(o.end,1)}</span>`)}</div>
+    <div class="sec">Chuỗi nguyên nhân</div>
+    <div class="chain">${w.chain.map(c=>`<div>${c}</div>`).join('<i>↓</i>')}</div>
+    <div class="sec">Kế hoạch so với dự kiến</div>
+    <div>
+      <div class="mt"><span>Kế hoạch</span><div class="mtk pl">${segH(plan,x0,px,"%")}${mk}</div></div>
+      <div class="mt"><span>Dự kiến</span><div class="mtk">${segH(segs(o),x0,px,"%")}<i class="sg lt" style="${at(o[7])};width:${o.late*px}%"></i>${mk}</div></div>
+      <div class="mt"><span></span><div class="mtk ax"><b style="${at(o[5])}">${dt(o[5])}</b><b style="${at(o[7])}">⚑ ${dt(o[7])}</b><b style="${at(o.end)};color:var(--bad)">${dt(o.end)}</b></div></div>
+    </div>
+    <div class="sec">Ảnh hưởng</div>
+    <div class="rows">${row("Số sản phẩm bị trễ",f(w.q)+" sp")}${row("Giá trị hàng trễ",`$${f(v)} (~${ty(v)})`)}${row("Phạt trễ (0,5%/ngày × "+o.late+" ngày)",`<span class="bad">$${f(pen)} (~${ty(pen)})</span>`)}</div>
+    <div class="sec">Phương án đề xuất</div>
+    ${w.acts.map((a,j)=>`<div class="act"><div style="flex:1"><b>${a[1]}</b><div class="muted">⚖ ${a[3]}</div><span class="badge b-ok">→ ${a[2]}</span></div>
+      ${w.done===j?'<button class="btn sm" disabled>✓ Đã áp dụng</button>':`<button class="btn sm primary" onclick="apply(${k},${j})"${w.done!=null?" disabled":""}>Áp dụng</button>`}</div>`).join("")}`, true);
+}
+function apply(k,j){
+  const w=W[k], o=O[w.o], a=w.acts[j]; w.done=j;
+  $("nt").insertAdjacentHTML("afterbegin", `<div class="li"><span class="avatar">KH</span><div style="flex:1"><b>Kế hoạch</b> — PO ${o[0]}: ${a[1]}<div class="muted">06/11 ${new Date().toTimeString().slice(0,5)} · Đã báo Tổ cắt, Kho, ${o.lines}</div></div></div>`);
+  wl(); openW(k);
+}
+function wl(){
+  $("wl").innerHTML = W.map((w,k)=>{ const o=O[w.o];
+    return `<div class="li"><span class="dot" style="background:${w.done!=null?"#15803D":"#DC2626"}"></span><div style="flex:1;min-width:0"><b>PO ${o[0]} · ${o[2]} · ${K[o[1]]}</b>
+      <div class="muted">${w.why} → <b class="bad">dự kiến trễ ${o.late} ngày</b> (xuất ${dt(o[7])} → ${dt(o.end)}) · ${f(w.q)} sp</div>
+      <div class="toolbar" style="margin-top:8px">${w.done!=null?`<span class="badge b-ok">✓ Đã áp dụng: ${w.acts[w.done][0]}</span>`:w.acts.map(a=>`<span class="badge b-info">${a[0]}</span>`).join("")}</div></div>
+      <button class="btn sm primary" onclick="openW(${k})">Xem chi tiết</button></div>`; }).join("");
+}
+wl();
+document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{
+  document.querySelectorAll(".tab,.view").forEach(e=>e.classList.remove("on"));
+  t.classList.add("on"); $(t.dataset.v).classList.add("on");
+});
+</script>
+</body>
+</html>

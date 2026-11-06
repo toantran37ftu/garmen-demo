@@ -1,0 +1,6 @@
+# tài liệu nội bộ (tham chiếu app thật của khách) — không đưa lên repo
+SPEC_PIM_KETOAN.md
+PAYROLL_COLS.md
+node_modules/
+.DS_Store
+Thumbs.db
