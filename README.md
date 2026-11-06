@@ -1,30 +1,31 @@
 # Garment demo — Mozy mini apps cho ngành dệt may
 
-Bản **design demo** (HTML tĩnh, dữ liệu giả) các mini app cho nhà máy may ~980 lao động, 15 chuyền. Dùng để duyệt giao diện và nhúng iframe lên landing page.
+Demo 9 mini app cho nhà máy may ~980 lao động, 15 chuyền. **Chỉ phần giao diện**, dựng trên `erp-miniapp-template` với component của `@erp/miniapp-ui` (v0.10.1). Không nối ERP, không API, mọi số liệu là dữ liệu giả trong `src/data/`.
 
-- `index.html` — Danh sách ứng dụng (mở từng app trong khung)
-- `apps/*.html` — 9 mini app, mỗi file chạy độc lập (nhúng iframe được, vd `apps/tinh-luong.html`)
-- `shared.css` — design token và component dùng chung
-- `FACTORY.md` — số liệu nhà máy mẫu mà mọi app dùng chung
-
-| App | File |
+| App | Route |
 |---|---|
-| Quản lý kế hoạch sản xuất | `apps/ke-hoach-san-xuat.html` |
-| Quản lý trải – cắt | `apps/trai-cat.html` |
-| Quản lý mẫu & tech pack | `apps/quan-ly-mau.html` |
-| Quản lý kho nguyên liệu | `apps/kho-nguyen-lieu.html` |
-| Quản lý nhân sự | `apps/nhan-su.html` |
-| Tính lương | `apps/tinh-luong.html` |
-| App cho công nhân | `apps/app-cong-nhan.html` |
-| Kế toán | `apps/ke-toan.html` |
-| Theo dõi vận hành | `apps/theo-doi-van-hanh.html` |
+| Danh sách ứng dụng | `/` |
+| Quản lý kế hoạch sản xuất | `/apps/ke-hoach-san-xuat/` |
+| Quản lý trải – cắt | `/apps/trai-cat/` |
+| Quản lý mẫu & tech pack | `/apps/quan-ly-mau/` |
+| Quản lý kho nguyên liệu | `/apps/kho-nguyen-lieu/` |
+| Quản lý nhân sự | `/apps/nhan-su/` |
+| Tính lương | `/apps/tinh-luong/` |
+| App cho công nhân | `/apps/app-cong-nhan/` |
+| Kế toán | `/apps/ke-toan/` |
+| Theo dõi vận hành | `/apps/theo-doi-van-hanh/` |
+
+## Cấu trúc
+- `src/app/apps/<slug>/page.tsx` — route (Server Component)
+- `src/components/page/<slug>-page.tsx` — điều phối màn hình
+- `src/components/features/<slug>/` — bảng, thẻ, biểu đồ, Sheet/Dialog
+- `src/data/<slug>.ts` — dữ liệu giả
+- `src/components/app-frame.tsx` — khung chung: breadcrumb, PageHeader, tab hoặc sidebar
 
 ## Chạy
-
-Không cần build. Mở bằng một static server bất kỳ:
-
 ```bash
-npx serve .
+bun install        # hoặc npm install (cần quyền tải release của @erp/miniapp-ui)
+bun run dev
+bun run build      # xuất trang tĩnh ra out/ (output: "export")
 ```
-
-Tên người, khách hàng, số liệu đều là dữ liệu giả.
+Build cho GitHub Pages dưới `/<repo>`: đặt `BASE_PATH=/<repo>` khi build.
