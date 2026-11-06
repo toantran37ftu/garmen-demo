@@ -11,9 +11,11 @@ import { QuickIntake } from "@/components/features/nhan-su/intake";
 import { ProfileSheet } from "@/components/features/nhan-su/profile-sheet";
 import { Recruitment } from "@/components/features/nhan-su/recruit";
 import { TurnoverReport } from "@/components/features/nhan-su/report";
+import { StaffMap } from "@/components/features/nhan-su/staff-map";
 import type { Employee } from "@/data/nhan-su";
 
 const NAV = [
+  { id: "bd", label: "Bản đồ nhân lực hôm nay" },
   { id: "ds", label: "Danh sách nhân viên" },
   { id: "nhap", label: "Nhập hồ sơ nhanh" },
   { id: "hd", label: "Hợp đồng" },
@@ -29,7 +31,7 @@ const OLD_PROFILE: Employee = {
 };
 
 export function NhanSuPage() {
-  const [tab, setTab] = useState("ds");
+  const [tab, setTab] = useState("bd");
   const [emp, setEmp] = useState<Employee | null>(null);
 
   return (
@@ -47,6 +49,7 @@ export function NhanSuPage() {
         </>
       }
     >
+      {tab === "bd" && <StaffMap />}
       {tab === "ds" && <EmployeeList onOpen={setEmp} />}
       {tab === "nhap" && <QuickIntake onOpenOld={() => setEmp(OLD_PROFILE)} />}
       {tab === "hd" && <Contracts />}

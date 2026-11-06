@@ -22,12 +22,13 @@ import { FilterSelect, KpiGrid, ToneBadge } from "./ui";
 const ALL_DEPT = "Tất cả bộ phận";
 const ALL_ST = "Tất cả trạng thái";
 
-export function KhoIssues({ onOpen }: { onOpen: (i: number) => void }) {
+export function KhoIssues({ onOpen, done = {} }: { onOpen: (i: number) => void; done?: Record<string, number> }) {
   const [dept, setDept] = useState(ALL_DEPT);
   const [status, setStatus] = useState(ALL_ST);
   const [q, setQ] = useState("");
   const needle = q.trim().toLowerCase();
-  const rows = ISSUES.map((p, i) => ({ p, i })).filter(
+  // phiếu vừa soạn xong ở màn "Quét mã xuất kho"
+  const rows = ISSUES.map((p, i) => ({ p: p.no in done ? { ...p, status: "Đã soạn", out: done[p.no] } : p, i })).filter(
     ({ p }) =>
       (dept === ALL_DEPT || deptMatch(p.dept, dept)) &&
       (status === ALL_ST || p.status === status) &&

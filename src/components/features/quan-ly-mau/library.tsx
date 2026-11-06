@@ -8,7 +8,7 @@ import { countSt, type Status, TP } from "@/data/quan-ly-mau";
 import { TechpackTable } from "./techpack-table";
 
 type Filter = "all" | Status;
-const CHIPS: [Filter, string, number][] = [
+const chips = (): [Filter, string, number][] => [
   ["all", "Tất cả", TP.length], ["ok", "Hoàn tất", countSt("ok")], ["run", "Đang xử lý", countSt("run")],
   ["wait", "Đang chờ", countSt("wait")], ["rev", "Cần xem", countSt("rev")],
 ];
@@ -28,7 +28,7 @@ export function Library({ q, onOpen }: { q: string; onOpen: (i: number) => void 
   return (
     <>
       <div className="flex flex-wrap gap-1.5">
-        {CHIPS.map(([id, label, n]) => (
+        {chips().map(([id, label, n]) => (
           <Button key={id} size="sm" className="rounded-full" variant={filt === id ? "default" : "outline"} onClick={() => { setFilt(id); setPage(0); }}>
             {label}<span className="opacity-70">{n}</span>
           </Button>

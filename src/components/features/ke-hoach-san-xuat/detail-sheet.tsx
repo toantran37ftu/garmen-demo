@@ -34,6 +34,7 @@ export function DetailSheet({
   onClose,
   onOpen,
   onApply,
+  onJourney,
 }: {
   detail: Detail;
   orders: Order[];
@@ -41,11 +42,12 @@ export function DetailSheet({
   onClose: () => void;
   onOpen: (d: Detail) => void;
   onApply: (k: number, j: number) => void;
+  onJourney: (i: number) => void;
 }) {
   return (
     <Sheet open={detail != null} onOpenChange={(o) => !o && onClose()}>
       <SheetContent side="right" className={`w-full overflow-y-auto ${detail?.kind === "warn" ? "sm:max-w-[600px]" : "sm:max-w-md"}`}>
-        {detail?.kind === "order" && <OrderDetail o={orders[detail.i]} onOpen={onOpen} />}
+        {detail?.kind === "order" && <OrderDetail o={orders[detail.i]} onOpen={onOpen} onJourney={onJourney} />}
         {detail?.kind === "warn" && <WarnDetail k={detail.k} o={orders[WARNS[detail.k].o]} done={done[detail.k]} onOpen={onOpen} onApply={onApply} />}
       </SheetContent>
     </Sheet>
@@ -59,7 +61,7 @@ function stBadge(o: Order) {
   return <Badge variant="secondary">{ST.plan}</Badge>;
 }
 
-function OrderDetail({ o, onOpen }: { o: Order; onOpen: (d: Detail) => void }) {
+function OrderDetail({ o, onOpen, onJourney }: { o: Order; onOpen: (d: Detail) => void; onJourney: (i: number) => void }) {
   const k = WARNS.findIndex((w) => w.o === o.i);
   const v = o.qty * o.usd;
   return (
@@ -80,6 +82,9 @@ function OrderDetail({ o, onOpen }: { o: Order; onOpen: (d: Detail) => void }) {
               : `Dự kiến xong ${dt(o.end - 1)} — ${o.ship > o.end ? `dư ${o.ship - o.end} ngày` : "vừa kịp"}`}
           </div>
         </div>
+        <Button variant="outline" className="mt-3 w-full" onClick={() => onJourney(o.i)}>
+          🧭 Xem hành trình đơn hàng
+        </Button>
         <Sec>Thông tin đơn</Sec>
         <Row a="Khách hàng" b={CUSTOMERS[o.cust]} />
         <Row a="Mã hàng" b={o.code} />

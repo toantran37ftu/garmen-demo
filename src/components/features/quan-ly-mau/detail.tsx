@@ -2,7 +2,7 @@ import {
   Badge, Button, Card, CardAction, CardContent, CardHeader, CardTitle, Input, StatisticCard,
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tabs, TabsList, TabsTrigger, ToggleGroup, ToggleGroupItem,
 } from "@erp/miniapp-ui";
-import { ChevronLeft, Download, History, Info, Pencil, Trash2, Upload } from "lucide-react";
+import { ChevronLeft, Download, GitCompare, History, Info, Pencil, Trash2, Upload } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { BOMS, CATS, CUS, CWS, NPG, POMS, sizesOf, TP } from "@/data/quan-ly-mau";
@@ -14,7 +14,7 @@ import { HistorySheet } from "./history-sheet";
 import { CustomerChip } from "./techpack-table";
 
 /** Chi tiết một techpack. Dùng `key={index}` ở nơi gọi để reset bộ lọc khi đổi techpack. */
-export function TechpackDetail({ index, onBack }: { index: number; onBack: () => void }) {
+export function TechpackDetail({ index, onBack, onCompare }: { index: number; onBack: () => void; onCompare: () => void }) {
   const cur = TP[index], k = cur.k;
   const CW = CWS[k], BOM = BOMS[k], POM = POMS[k], SZ = sizesOf(k);
   const [sd, setSd] = useState<"front" | "back">("front");
@@ -51,6 +51,7 @@ export function TechpackDetail({ index, onBack }: { index: number; onBack: () =>
         <div className="ml-auto flex flex-wrap gap-2">
           <Button onClick={() => setEditOpen(true)}><Pencil /> Chỉnh sửa</Button>
           <Button variant="outline" onClick={() => setHistOpen(true)}><History /> Lịch sử</Button>
+          {k === "khoac" && <Button variant="outline" onClick={onCompare}><GitCompare /> So sánh</Button>}
           <Button variant="outline" onClick={() => toast("Chọn PDF bản mới để tải lên")}><Upload /> Tải bản mới</Button>
           <Button variant="outline" onClick={() => toast(`Đang tải ${cur.code}…`)}><Download /> Tải xuống</Button>
           <Button variant="outline" className="text-destructive" onClick={() => toast(`Đã chuyển ${cur.code} vào thùng rác`)}><Trash2 /> Xóa</Button>
@@ -173,7 +174,7 @@ export function TechpackDetail({ index, onBack }: { index: number; onBack: () =>
       </p>
 
       <EditDialog tp={cur} open={editOpen} onOpenChange={setEditOpen} />
-      <HistorySheet tp={cur} open={histOpen} onOpenChange={setHistOpen} />
+      <HistorySheet tp={cur} open={histOpen} onOpenChange={setHistOpen} onCompare={k === "khoac" ? onCompare : undefined} />
     </>
   );
 }

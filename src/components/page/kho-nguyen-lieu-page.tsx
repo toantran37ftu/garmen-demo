@@ -5,6 +5,8 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { AppFrame } from "@/components/app-frame";
 import { type DocRef, KhoDocSheet } from "@/components/features/kho-nguyen-lieu/doc-sheet";
+import { KhoMap } from "@/components/features/kho-nguyen-lieu/map-screen";
+import { KhoScan } from "@/components/features/kho-nguyen-lieu/scan-screen";
 import { KhoIssues } from "@/components/features/kho-nguyen-lieu/issues";
 import { KhoNeeds } from "@/components/features/kho-nguyen-lieu/needs";
 import { KhoOverview } from "@/components/features/kho-nguyen-lieu/overview";
@@ -14,8 +16,10 @@ import { KhoStocktake } from "@/components/features/kho-nguyen-lieu/stocktake";
 
 const NAV = [
   { id: "tq", label: "Tổng quan kho" },
+  { id: "sodo", label: "Sơ đồ kho" },
   { id: "nhap", label: "Hàng về (nhập kho)" },
   { id: "xuat", label: "Xuất kho" },
+  { id: "quet", label: "Quét mã xuất kho" },
   { id: "ton", label: "Tồn kho" },
   { id: "thieu", label: "Nhu cầu & cảnh báo thiếu", badge: 6 },
   { id: "kk", label: "Kiểm kê & tồn đọng" },
@@ -24,6 +28,7 @@ const NAV = [
 export function KhoNguyenLieuPage() {
   const [tab, setTab] = useState("tq");
   const [doc, setDoc] = useState<DocRef>(null);
+  const [done, setDone] = useState<Record<string, number>>({});
 
   return (
     <AppFrame
@@ -42,7 +47,9 @@ export function KhoNguyenLieuPage() {
     >
       {tab === "tq" && <KhoOverview />}
       {tab === "nhap" && <KhoReceipts onOpen={(i) => setDoc({ kind: "pn", i })} />}
-      {tab === "xuat" && <KhoIssues onOpen={(i) => setDoc({ kind: "px", i })} />}
+      {tab === "sodo" && <KhoMap />}
+      {tab === "xuat" && <KhoIssues done={done} onOpen={(i) => setDoc({ kind: "px", i })} />}
+      {tab === "quet" && <KhoScan done={done} onDone={(no, out) => setDone((d) => ({ ...d, [no]: out }))} />}
       {tab === "ton" && <KhoStock />}
       {tab === "thieu" && <KhoNeeds />}
       {tab === "kk" && <KhoStocktake />}

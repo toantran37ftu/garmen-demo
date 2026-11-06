@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { AppFrame, type FrameNavItem } from "@/components/app-frame";
 import { BoView } from "@/components/features/trai-cat/bo-view";
 import { CutSheet } from "@/components/features/trai-cat/cut-sheet";
+import { MarkerView } from "@/components/features/trai-cat/marker-view";
 import { OrderView } from "@/components/features/trai-cat/order-view";
 import { type Filter, Lk, type Nav, type View } from "@/components/features/trai-cat/shared";
 import { CuonView, HaoHutView, LenhView, NangSuatView, PhieuView } from "@/components/features/trai-cat/views";
@@ -15,6 +16,7 @@ import { FIN, O } from "@/data/trai-cat";
 const ITEMS: FrameNavItem[] = [
   { id: "order", label: "Order cắt" },
   { id: "lenh", label: "Lệnh cắt" },
+  { id: "sd", label: "Sơ đồ cắt" },
   { id: "phieu", label: "Phiếu trải theo bàn" },
   { id: "cuon", label: "Cuộn vải đã quét" },
   { id: "hh", label: "Hao hụt vải" },
@@ -28,6 +30,7 @@ export function TraiCatPage() {
   const [F, setF] = useState<Filter | null>(null);
   const [oi, setOi] = useState(0);
   const [boIdx, setBoIdx] = useState(0);
+  const [sdIdx, setSdIdx] = useState(0);
   const [sheet, setSheet] = useState<{ lc: number; lay?: string } | null>(null);
 
   // Nhảy sang màn khác, lọc theo đơn (+ màu/size/lệnh cắt) và tô dòng khớp
@@ -43,7 +46,7 @@ export function TraiCatPage() {
     }
     window.scrollTo(0, 0);
   };
-  const nav: Nav = { F, goto, openLC: (lc, lay) => setSheet({ lc, lay }) };
+  const nav: Nav = { F, goto, openLC: (lc, lay) => setSheet({ lc, lay }), openSD: (lc) => { setSdIdx(lc); goto("sd"); } };
 
   return (
     <AppFrame
@@ -71,6 +74,7 @@ export function TraiCatPage() {
       )}
       {view === "order" && <OrderView oi={oi} onSelect={setOi} nav={nav} />}
       {view === "lenh" && <LenhView nav={nav} />}
+      {view === "sd" && <MarkerView idx={sdIdx} onPick={setSdIdx} nav={nav} />}
       {view === "phieu" && <PhieuView nav={nav} />}
       {view === "cuon" && <CuonView nav={nav} />}
       {view === "hh" && <HaoHutView nav={nav} />}

@@ -284,3 +284,27 @@ export const USERS: [string, string, string, string, string][] = [
   ["LB", "Lê Thị Bích", "Merchandiser", "Biên tập", "1 giờ trước"], ["PT", "Phạm Văn Tú", "QA", "Chỉ xem", "Hôm qua"],
   ["ĐK", "Đỗ Minh Khoa", "Kế hoạch sản xuất", "Chỉ xem", "04/11/2026"], ["VL", "Vũ Ngọc Lan", "Kho NPL", "Chỉ xem", "02/11/2026"],
 ];
+
+/* ---------- So sánh phiên bản (áo khoác, kind "khoac"; bản 3 = BOMS/POMS hiện tại) ---------- */
+/** Ô không đổi = string; ô đổi = [cũ, mới]. */
+export type DiffCell = string | [string, string];
+/** cells: [mô tả, quy cách, mã, SL / số đo M, vị trí dùng]; mark: [x, y, r, nhãn] trên hình phẳng mặt trước */
+export type Diff = { t: "add" | "del" | "chg"; tbl: "Vật tư" | "Thông số"; cells: DiffCell[]; imp?: "dm" | "gia"; mark?: [number, number, number, string] };
+export const VERS: [string, string][] = [["14/10/2026", "AI bóc tách bản rev A"], ["28/10/2026", "Khách gửi rev B"], ["04/11/2026", "Sửa tay · Trần Thu Hà"]];
+/** DIFFS[i] = thay đổi từ bản i+1 lên bản i+2 */
+export const DIFFS: Diff[][] = [
+  [
+    { t: "chg", tbl: "Vật tư", cells: [["Nhãn HDSD in giấy Tyvek 3 ngôn ngữ", "Nhãn HDSD in satin 5 ngôn ngữ"], ["30 × 60 mm", "30 × 80 mm"], ["N-0160", "N-0215"], "1,000 PC", "Sườn trái, mặt trong"], imp: "gia" },
+    { t: "add", tbl: "Vật tư", cells: ["Băng ép seam chống thấm 3 lớp", "Rộng 20 mm", "BK-0320", "4,200 M", "Vai, sườn, mũ"], imp: "dm" },
+    { t: "del", tbl: "Vật tư", cells: ["Cúc bấm cổ kim loại", "Ø 12 mm", "CB-1202", "2,000 PC", "Cổ trước"] },
+  ],
+  [
+    { t: "add", tbl: "Vật tư", cells: ["Dây kéo nylon răng ẩn chống nước #3 (túi ngực)", "Dài 14 cm", "DK-3014", "1,000 PC", "Túi ngực trái"], imp: "dm", mark: [124, 96, 15, "Túi ngực khóa giấu — thêm mới"] },
+    { t: "add", tbl: "Vật tư", cells: ["Bo cổ dệt kim 1×1, 95% PE 5% spandex", "4 × 48 cm", "BO-0148", "1,000 PC", "Chân cổ"], imp: "dm", mark: [100, 58, 13, "Cổ: bỏ gai dính, đổi sang bo dệt kim"] },
+    { t: "del", tbl: "Vật tư", cells: ["Băng gai dính (velcro) cài cổ", "3 × 2 cm", "VC-0302", "1,000 PC", "Cổ trước"] },
+    { t: "chg", tbl: "Vật tư", cells: [["Dây kéo YKK răng ẩn #5", "Dây kéo YKK răng ẩn chống nước #3"], "Dài 18 cm", ["DK-5018", "DK-3018"], "2,000 PC", "Túi sườn"], imp: "gia" },
+    { t: "chg", tbl: "Vật tư", cells: ["Dây kéo nhựa #5, 2 chiều, đầu khóa logo", ["Dài 64 cm", "Dài 66 cm"], ["DK-5064", "DK-5066"], "1,000 PC", "Nẹp trước"] },
+    { t: "chg", tbl: "Thông số", cells: ["B · Rộng ngực ½", "Dung sai ±1", "—", ["57 cm", "58 cm"], "Bảng size, tr. 14"] },
+    { t: "chg", tbl: "Thông số", cells: ["E · Dài tay", "Dung sai ±1", "—", ["63 cm", "64 cm"], "Bảng size, tr. 14"] },
+  ],
+];

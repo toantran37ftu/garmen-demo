@@ -17,16 +17,22 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { AppFrame } from "@/components/app-frame";
 import { type Detail, DetailSheet } from "@/components/features/ke-hoach-san-xuat/detail-sheet";
+import { JourneyTab } from "@/components/features/ke-hoach-san-xuat/journey";
+import { NewOrderTab } from "@/components/features/ke-hoach-san-xuat/new-order";
 import { OrderGantt } from "@/components/features/ke-hoach-san-xuat/order-gantt";
 import { CapacityTab, DailyTab, OrdersTab, WarningsTab } from "@/components/features/ke-hoach-san-xuat/tabs";
 import {
+  addOrder,
   buildOrders,
   CUSTOMERS,
   calc,
   curOnLine,
   dt,
+  type Fit,
   INITIAL_SCHED,
   N,
+  type NewSpec,
+  newRaw,
   NOTES,
   type Note,
   type Sched,
@@ -37,6 +43,8 @@ import {
 
 const TABS = [
   { id: "bang", label: "Bảng kế hoạch" },
+  { id: "moi", label: "Nhận đơn mới — có kịp không?" },
+  { id: "ht", label: "Hành trình đơn hàng" },
   { id: "nl", label: "Năng lực chuyền" },
   { id: "lenh", label: "Lệnh sản xuất" },
   { id: "td", label: "Tiến độ hằng ngày" },
@@ -65,6 +73,7 @@ export function KeHoachSanXuatPage() {
   const [detail, setDetail] = useState<Detail>(null);
   const [done, setDone] = useState<(number | null)[]>(WARNS.map(() => null));
   const [notes, setNotes] = useState<Note[]>(NOTES);
+  const [jo, setJo] = useState(4); // BM-7720
 
   const orders = useMemo(() => buildOrders(plan.sched), [plan.sched]);
   const nLsx = orders.reduce((s, o) => s + o.lsx.length, 0);
@@ -105,6 +114,24 @@ export function KeHoachSanXuatPage() {
     notify("Đã lưu kế hoạch · đã báo Tổ cắt, Kho và các chuyền liên quan", false);
   };
 
+  const addNew = (spec: NewSpec, fit: Fit) => {
+    const raw = newRaw(orders, spec, fit);
+    const sched = plan.sched.slice();
+    for (const s of fit.shifts) sched[s.i] = { ...sched[s.i], start: sched[s.i].start + s.d };
+    sched[addOrder(raw)] = { start: fit.start, sew: fit.se - fit.ss };
+    setPlan({ sched, undo: plan.undo });
+    toast.success(`Đã đưa PO ${raw[0]} vào kế hoạch · Chuyền ${fit.lines.map((n) => String(n).padStart(2, "0")).join(" + ")} · xong ${dt(fit.end - 1)}`, {
+      description: fit.shifts.length ? `Đã dời ${fit.shifts.length} đơn khác · xem ở Bảng kế hoạch` : "Xem ở Bảng kế hoạch",
+      action: { label: "Xem", onClick: () => setTab("bang") },
+    });
+  };
+
+  const openJourney = (i: number) => {
+    setJo(i);
+    setDetail(null);
+    setTab("ht");
+  };
+
   const apply = (k: number, j: number) => {
     const w = WARNS[k];
     const o = orders[w.o];
@@ -131,7 +158,7 @@ export function KeHoachSanXuatPage() {
       actions={
         <>
           <Button variant="outline">⬇ Xuất Excel</Button>
-          <Button>＋ Xếp đơn mới</Button>
+          <Button onClick={() => setTab("moi")}>＋ Xếp đơn mới</Button>
         </>
       }
     >
@@ -209,12 +236,14 @@ export function KeHoachSanXuatPage() {
           </p>
         </>
       )}
+      {tab === "moi" && <NewOrderTab orders={orders} onAdd={addNew} />}
+      {tab === "ht" && <JourneyTab orders={orders} sel={jo} onSel={setJo} />}
       {tab === "nl" && <CapacityTab orders={orders} />}
       {tab === "lenh" && <OrdersTab orders={orders} onOpen={openOrder} />}
       {tab === "td" && <DailyTab orders={orders} />}
       {tab === "cb" && <WarningsTab orders={orders} done={done} notes={notes} onOpenWarn={(k) => setDetail({ kind: "warn", k })} />}
 
-      <DetailSheet detail={detail} orders={orders} done={done} onClose={() => setDetail(null)} onOpen={setDetail} onApply={apply} />
+      <DetailSheet detail={detail} orders={orders} done={done} onClose={() => setDetail(null)} onOpen={setDetail} onApply={apply} onJourney={openJourney} />
     </AppFrame>
   );
 }

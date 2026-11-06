@@ -14,7 +14,7 @@ export const N = 182;
 export const TODAY = 4;
 const RATE = 25400;
 
-type Raw = [
+export type Raw = [
   po: string,
   cust: number,
   code: string,
@@ -90,7 +90,7 @@ export type Order = {
 };
 
 let code = 2611;
-const BASE = RAW.map((r, i) => {
+function mkBase(r: Raw, i: number) {
   const [po, cust, c, qty, usd, start, days, ship, npl, lsx, prog] = r;
   return {
     i, po, cust, code: c, qty, usd, start, days, ship, npl, prog,
@@ -101,7 +101,15 @@ const BASE = RAW.map((r, i) => {
     // % sản xuất, gộp 3 khâu theo số ngày
     pct: Math.round(days.reduce((s, d, k) => s + d * prog[k], 0) / days.reduce((s, d) => s + d, 0)),
   };
-});
+}
+const BASE = RAW.map(mkBase);
+
+/** Thêm đơn mới vào dữ liệu gốc, trả về chỉ số đơn. */
+// shortcut: ghi thẳng vào mảng module (demo không backend), tải lại trang là mất; khi nối ERP thì lưu qua API.
+export function addOrder(r: Raw): number {
+  BASE.push(mkBase(r, BASE.length));
+  return BASE.length - 1;
+}
 
 export const INITIAL_SCHED: Sched[] = BASE.map((b) => ({ start: b.start, sew: b.days[1] }));
 
@@ -183,6 +191,65 @@ export function segs(o: Order): [number, number, number, number][] {
 export const onLine = (orders: Order[], n: number) => orders.filter((o) => o.lsx.some((l) => l.line === n));
 export const curOnLine = (orders: Order[], n: number) => onLine(orders, n).filter((o) => o.ss <= TODAY && o.se > TODAY);
 
+// ---------- Nhận đơn mới: có kịp không? ----------
+export type NewSpec = { cust: number; code: string; qty: number; ship: number; npl: number };
+export type Shift = { i: number; d: number; line: number };
+export type Fit = {
+  lines: number[];
+  start: number; // ngày bắt đầu cắt
+  cut: number;
+  ss: number; // may từ
+  se: number; // may đến (không gồm)
+  end: number; // xong hoàn thiện (không gồm)
+  late: number;
+  free: number[]; // ngày rảnh sớm nhất của từng chuyền (sau khi cắt xong)
+  shifts: Shift[]; // đơn khác phải lùi
+  capDay: number; // SP/ngày của các chuyền được chọn
+};
+export const FIN = 3;
+
+/** Xếp thử đơn mới vào `nLines` chuyền tốt nhất, dựa trên lịch chuyền hiện có. `boost` = hệ số tăng ca. */
+export function fitNew(orders: Order[], spec: NewSpec, nLines = 2, boost = 1): Fit {
+  const start0 = Math.max(TODAY + 1, spec.npl);
+  const cut = Math.max(3, Math.ceil(spec.qty / 6000));
+  const c0 = start0 + cut;
+  const free = CAP.map((_, k) => {
+    let F = c0;
+    for (const o of onLine(orders, k + 1).sort((a, b) => a.ss - b.ss)) if (o.ss <= F && o.se > F) F = o.se;
+    return F;
+  });
+  // chuyền chưa may mã hàng này: 3 tuần đầu chỉ đạt ~85% năng suất
+  const rate = (n: number) => CAP[n - 1][0] * boost * (onLine(orders, n).some((o) => o.code === spec.code) ? 1 : 0.85);
+  const bumped = (n: number, e: number) => onLine(orders, n).filter((o) => o.ss >= free[n - 1] && o.ss < e);
+  const score = (k: number) => {
+    const e = free[k] + Math.ceil(spec.qty / nLines / rate(k + 1));
+    return e + bumped(k + 1, e).reduce((s, o) => s + e - o.ss, 0) * 0.2;
+  };
+  const lines = CAP.map((_, k) => k)
+    .sort((a, b) => score(a) - score(b) || a - b)
+    .slice(0, nLines)
+    .map((k) => k + 1)
+    .sort((a, b) => a - b);
+  const capDay = lines.reduce((s, n) => s + rate(n), 0);
+  const ss = Math.max(...lines.map((n) => free[n - 1]));
+  const se = ss + Math.ceil(spec.qty / capDay);
+  const end = se + FIN;
+  const m = new Map<number, Shift>();
+  for (const n of lines)
+    for (const o of bumped(n, se)) if ((m.get(o.i)?.d ?? 0) < se - o.ss) m.set(o.i, { i: o.i, d: se - o.ss, line: n });
+  return { lines, start: ss - cut, cut, ss, se, end, late: Math.max(0, end - spec.ship), free, shifts: [...m.values()], capDay };
+}
+
+/** Bản ghi Raw để đưa đơn mới vào kế hoạch. */
+export function newRaw(orders: Order[], spec: NewSpec, fit: Fit): Raw {
+  const pre = orders.find((o) => o.cust === spec.cust)?.po.slice(0, 2) ?? "XX";
+  const no = Math.max(0, ...orders.filter((o) => o.po.startsWith(pre)).map((o) => +o.po.slice(3))) + 10;
+  const share = Math.floor(spec.qty / fit.lines.length / 100) * 100;
+  const lsx = fit.lines.map((n, k): [number, number, number] => [n, k === fit.lines.length - 1 ? spec.qty - share * k : share, 0]);
+  const usd = orders.find((o) => o.code === spec.code)?.usd ?? 7.5;
+  return [`${pre}-${no}`, spec.cust, spec.code, spec.qty, usd, fit.start, [fit.cut, fit.se - fit.ss, FIN], spec.ship, [["Vải chính", spec.npl]], lsx, [0, 0, 0]];
+}
+
 // tự kiểm (giống bản HTML)
 {
   const os = buildOrders(INITIAL_SCHED);
@@ -192,4 +259,9 @@ export const curOnLine = (orders: Order[], n: number) => onLine(orders, n).filte
   const m = calc(0, { start: 12, sew: 12 }); // NV-4471 dời cắt sang 14/11: hết chờ NPL, trễ 5 ngày
   console.assert(m.w === 0 && m.end === 30 && m.late === 5 && m.st === "late", "kéo thả tính lại ngày xong & trễ");
   console.assert(WORKERS.filter((_, i) => curOnLine(os, i + 1).length).length === 14, "14 chuyền đang may");
+  const ok = fitNew(os, { cust: 4, code: "AO-KHOAC-1150", qty: 20000, ship: 43, npl: 23 });
+  const bad = fitNew(os, { cust: 1, code: "SOMI-NU-1210", qty: 60000, ship: 43, npl: 23 });
+  const demo = fitNew(os, { cust: 2, code: "SOMI-NU-1210", qty: 30000, ship: 46, npl: 23 }); // mặc định màn Nhận đơn mới
+  console.assert(demo.late === 0 && demo.lines.join() === "7,14" && demo.shifts.length === 1 && os[demo.shifts[0].i].po === "KZ-3330", "đơn mẫu: kịp, dời KZ-3330");
+  console.assert(ok.late === 0 && bad.late > 0 && ok.lines.join() === "4,11" && ok.end === 40, "đơn mới: SL lớn hơn thì trễ");
 }

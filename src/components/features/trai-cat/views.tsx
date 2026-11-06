@@ -40,7 +40,7 @@ export function LenhView({ nav }: { nav: Nav }) {
                   <FRow key={lc.id} F={nav.F} d={{ o: lc.o, m: lc.lays.map((y) => y.mau), lc: lc.id }} onClick={() => nav.openLC(i)}>
                     <TableCell className="font-semibold">{lc.id}</TableCell>
                     <TableCell><Lk on={() => nav.goto("order", { o: lc.o })}>{o.po}</Lk></TableCell>
-                    <TableCell>{o.ma}</TableCell><TableCell>{lc.ban}</TableCell><TableCell>{o.sd[0]}</TableCell>
+                    <TableCell>{o.ma}</TableCell><TableCell>{lc.ban}</TableCell><TableCell>{o.sd[0]} <Lk on={() => nav.openSD(i)}>· Xem sơ đồ</Lk></TableCell>
                     <TableCell numeric>{fmt(o.sd[1], 2)} m</TableCell><TableCell numeric>{o.sd[2]} cm</TableCell><TableCell numeric>{fmt(o.sd[3], 1)}%</TableCell>
                     <TableCell><Ratio o={o} /></TableCell>
                     <TableCell>{lc.lays.map((y) => <div key={y.id}>{y.mau} · {y.kh}</div>)}</TableCell>

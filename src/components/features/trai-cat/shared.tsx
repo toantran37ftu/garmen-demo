@@ -5,13 +5,15 @@ import type { ReactNode } from "react";
 import type { Lay, Order, Tone } from "@/data/trai-cat";
 import { fmt } from "@/lib/format";
 
-export type View = "order" | "lenh" | "phieu" | "cuon" | "hh" | "bo" | "ns" | "dt";
+export type View = "order" | "lenh" | "sd" | "phieu" | "cuon" | "hh" | "bo" | "ns" | "dt";
 /** Bộ lọc khi nhảy từ Order cắt sang màn khác: đơn (index) + màu/size/lệnh cắt tuỳ chọn */
 export type Filter = { o: number; mau?: string; sz?: string; lc?: string };
 export type Nav = {
   F: Filter | null;
   goto: (v: View, f?: Filter) => void;
   openLC: (lcIndex: number, layId?: string) => void;
+  /** Mở màn Sơ đồ cắt của lệnh cắt */
+  openSD: (lcIndex: number) => void;
 };
 
 const TONE: Record<Tone, string> = {

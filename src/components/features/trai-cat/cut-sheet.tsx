@@ -87,7 +87,7 @@ export function CutSheet({ open, nav, onClose }: { open: { lc: number; lay?: str
               <KV
                 items={[
                   ["Order (PO)", <Lk key="po" on={() => nav.goto("order", { o: lc.o })}>{lc.O.po}</Lk>], ["Khách hàng", lc.O.kh], ["Mã hàng", lc.O.ma],
-                  ["Lệnh cắt số", lc.id], ["Ngày", "06/11/2026"], ["Bàn cắt", lc.ban], ["Sơ đồ", lc.O.sd[0]],
+                  ["Lệnh cắt số", lc.id], ["Ngày", "06/11/2026"], ["Bàn cắt", lc.ban], ["Sơ đồ", <span key="sd">{lc.O.sd[0]} <Lk on={() => nav.openSD(L.indexOf(lc))}>· Xem sơ đồ</Lk></span>],
                   ["Chiều dài sơ đồ", fmt(lc.O.sd[1], 2) + " m"], ["Khổ vải", lc.O.sd[2] + " cm"], ["Hiệu suất sơ đồ", fmt(lc.O.sd[3], 1) + "%"],
                 ]}
               />

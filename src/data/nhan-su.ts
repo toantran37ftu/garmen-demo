@@ -198,3 +198,70 @@ export const LINE_CHANGES = [
   { line: "Chuyền 12", start: 43, hired: 3, left: 1, moved: -1, end: 44, rate: "2,3%", tone: "ok" as Tone },
   { line: "Toàn nhà máy", start: 967, hired: 52, left: 41, moved: 0, end: 978, rate: "4,2%", tone: "warn" as Tone, total: true },
 ];
+
+// ---------- Bản đồ nhân lực hôm nay ----------
+export type DayStatus = "Có mặt" | "Đi muộn" | "Nghỉ phép" | "Không phép";
+/** absentDays = số ngày vắng trong 30 ngày gần nhất (≥4 → rủi ro nghỉ việc cao); from = chuyền cũ nếu vừa điều chuyển */
+export type Worker = { id: string; name: string; step: string; level: number; status: DayStatus; absentDays: number; from?: string };
+export const STEPS = ["May cổ", "Tra tay", "Vắt sổ", "May túi", "Diễu, mí", "Đính cúc, thùa khuyết", "Ủi bán thành phẩm", "Kiểm hàng chuyền"];
+export const RISK_DAYS = 4;
+
+// [chuyền, biên chế, nghỉ phép, không phép, đi muộn, định biên hôm nay] — biên chế khớp Báo cáo biến động (03=44, 05=46, 07=44, 12=44), tổng 675
+const LINE_PLAN: [number, number, number, number, number, number][] = [
+  [1, 45, 1, 0, 0, 45], [2, 46, 2, 1, 1, 44], [3, 44, 2, 2, 0, 45], [4, 45, 1, 0, 0, 43], [5, 46, 1, 0, 1, 46],
+  [6, 47, 1, 1, 1, 45], [7, 44, 0, 0, 0, 41], [8, 43, 1, 1, 1, 43], [9, 46, 1, 0, 0, 45], [10, 45, 2, 1, 2, 44],
+  [11, 44, 1, 1, 0, 42], [12, 44, 2, 2, 1, 45], [13, 47, 1, 0, 0, 44], [14, 46, 1, 1, 2, 46], [15, 43, 1, 0, 0, 42],
+];
+const lineName = (n: number) => "Chuyền " + String(n).padStart(2, "0");
+export const LINE_TARGET: Record<string, number> = Object.fromEntries(LINE_PLAN.map((l) => [lineName(l[0]), l[5]]));
+
+/** Công nhân từng chuyền: hồ sơ có sẵn trong danh sách nhân viên đứng đầu, phần còn lại sinh bằng PRNG cố định. */
+export function buildFloor(): Record<string, Worker[]> {
+  let seed = 675;
+  const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
+  const pick = <T,>(a: T[]) => a[Math.floor(rnd() * a.length)];
+  const HO = ["Nguyễn", "Trần", "Lê", "Phạm", "Hoàng", "Huỳnh", "Phan", "Vũ", "Võ", "Đặng", "Bùi", "Đỗ", "Hồ", "Ngô", "Dương", "Lý", "Trịnh", "Đinh", "Mai", "Cao"];
+  const TEN = ["Hương", "Huyền", "Trang", "Nhung", "Loan", "Thảo", "Dung", "Hiền", "Liên", "Oanh", "Phương", "Quyên", "Tâm", "Vân", "Xuân", "Duyên", "Hà", "Linh"];
+  const used = new Set(EMPLOYEES.map((e) => e.id));
+  let next = 100;
+  const newId = () => {
+    while (used.has("NV" + String(next).padStart(4, "0"))) next++;
+    used.add("NV" + String(next).padStart(4, "0"));
+    return "NV" + String(next++).padStart(4, "0");
+  };
+  const out: Record<string, Worker[]> = {};
+  for (const [n, hc, leave, awol, late] of LINE_PLAN) {
+    const line = lineName(n);
+    const known = EMPLOYEES.filter((e) => e.team === line && e.status !== "Nghỉ thai sản");
+    out[line] = Array.from({ length: hc }, (_, i) => {
+      const k = known[i];
+      const nu = rnd() < 0.85;
+      let name = k ? k.name : pick(HO) + " " + (nu ? "Thị " + pick(TEN) : "Văn " + pick(["Hùng", "Nam", "Tuấn", "Sơn"]));
+      const status: DayStatus =
+        i >= hc - awol ? "Không phép" : i >= hc - awol - leave ? "Nghỉ phép" : i >= 6 && i < 6 + late ? "Đi muộn" : "Có mặt";
+      if (line === "Chuyền 12" && i === hc - awol - leave) name = "Phạm Thị Thu"; // đơn nghỉ ốm 06/11 ở màn Chấm công
+      const absentDays = status === "Không phép" ? 3 + Math.floor(rnd() * 4) : rnd() < 0.07 ? 4 + Math.floor(rnd() * 2) : Math.floor(rnd() * 3);
+      const level = k?.status === "Thử việc" ? 1 : 1 + Math.floor(rnd() * 5);
+      return { id: k ? k.id : newId(), name, step: STEPS[i % STEPS.length], level, status, absentDays };
+    });
+  }
+  return out;
+}
+
+/** Bộ phận ngoài chuyền may: biên chế / có mặt (khớp tỉ lệ đi làm theo bộ phận) */
+export const AREAS = [
+  { name: "Hoàn thiện", note: "Ủi · cắt chỉ · đóng gói", hc: 110, present: 98 },
+  { name: "QA", note: "QA Xưởng 1, 2, thành phẩm", hc: 28, present: 27 },
+  { name: "Kho NPL", note: "Kho vải · phụ liệu", hc: 22, present: 22 },
+  { name: "Văn phòng", note: "Gián tiếp · kỹ thuật · mẫu", hc: 90, present: 89 },
+];
+/** 8 bàn cắt: [biên chế, có mặt] — tổng 55 / 53 */
+export const CUT_TABLES: [number, number][] = [[7, 7], [7, 7], [7, 6], [7, 7], [7, 7], [7, 6], [7, 7], [6, 6]];
+export const TODAY_ABSENCE = { leave: 28, awol: 16, lateOutsideLines: 3, newThisWeek: 9 };
+
+export type Move = { from: string; to: string; n: number; step: string; why: string; fit: number };
+export const MOVES: Move[] = [
+  { from: "Chuyền 07", to: "Chuyền 12", n: 3, step: "May cổ", fit: 94, why: "Chuyền 07 dư 3 (mã áo thun đơn giản), Chuyền 12 thiếu 5 khi đang chạy đơn xuất — cùng tay nghề may cổ, bậc ≥3." },
+  { from: "Chuyền 13", to: "Chuyền 03", n: 2, step: "Tra tay", fit: 88, why: "Chuyền 03 mới vào mã VAY-XOE-1105, năng suất 81% — thêm 2 thợ tra tay vững tay từ Chuyền 13 đang dư 2." },
+  { from: "Chuyền 04", to: "Chuyền 14", n: 1, step: "Vắt sổ", fit: 81, why: "Chuyền 04 dư 1 sau khi cân chuyền — chuyển 1 thợ vắt sổ sang Chuyền 14 (thiếu 2)." },
+];
