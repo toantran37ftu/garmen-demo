@@ -29,3 +29,12 @@ bun run dev
 bun run build      # xuất trang tĩnh ra out/ (output: "export")
 ```
 Build cho GitHub Pages dưới `/<repo>`: đặt `BASE_PATH=/<repo>` khi build.
+
+## Bản HTML cũ
+Bản design HTML tĩnh trước khi chuyển sang kit nằm ở `html-demo/` (mở `html-demo/index.html`).
+
+## Bản online (GitHub Pages)
+- Bản dùng kit: https://toantran37ftu.github.io/garmen-demo/
+- Bản HTML cũ: https://toantran37ftu.github.io/garmen-demo/html-demo/
+
+Deploy: `BASE_PATH=/garmen-demo next build`, chép `html-demo/` vào `out/`, thêm `out/.nojekyll`, đẩy `out/` lên nhánh `gh-pages`.

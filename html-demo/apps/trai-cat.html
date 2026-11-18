@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trải – cắt</title>
+<link rel="stylesheet" href="../shared.css">
+<style>
+#drawer{width:min(820px,100%)}
+.kv{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px 16px}
+.kv div{font-size:12px;color:var(--muted)} .kv b{display:block;font-size:14px;color:var(--ink);margin-top:2px}
+.ratio{display:inline-flex;gap:4px;flex-wrap:nowrap} .ratio span{background:var(--soft);border-radius:6px;padding:1px 7px;font-weight:600;font-size:12px}
+table.t td.c,table.t th.c{text-align:center}
+table.t tr.sel td{background:var(--primary-50)}
+table.t tr.grp td{background:#FAFAFB;font-weight:700}
+.lay{border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:12px}
+.lay h4{margin:0;font-size:15px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.formula{font-size:12px;color:var(--muted);background:var(--soft);border-radius:8px;padding:8px 10px}
+.phone-wrap{display:flex;gap:24px;flex-wrap:wrap;justify-content:center;align-items:flex-start}
+.phone{width:100%;max-width:360px;border:10px solid #111827;border-radius:36px;background:#fff;overflow:hidden;box-shadow:0 12px 32px rgba(0,0,0,.12)}
+.ph-top{background:var(--primary);color:#fff;padding:18px 18px 16px}
+.ph-top .s{opacity:.85;font-size:13px}
+.ph-top .big{font-size:26px;font-weight:700;margin-top:6px}
+.ph-b{padding:16px;display:flex;flex-direction:column;gap:12px}
+.ph-scan{border:2px dashed var(--primary);border-radius:14px;padding:18px;text-align:center;color:var(--primary);font-weight:600;background:var(--primary-50)}
+.ph-scan .ic{font-size:40px}
+.ph-roll{border:1px solid var(--line);border-radius:12px;padding:12px;font-size:15px}
+.ph-btn{height:64px;border-radius:14px;border:0;background:var(--ok);color:#fff;font-size:20px;font-weight:700;width:100%}
+.ph-cnt{display:flex;align-items:center;justify-content:space-between;font-size:15px}
+.ph-cnt button{width:44px;height:44px;border-radius:22px;border:1px solid var(--line);background:#fff;font-size:22px}
+.ph-cnt b{font-size:28px}
+.ph-notes{max-width:320px;display:flex;flex-direction:column;gap:12px}
+.ph-notes .card-b{display:flex;gap:10px}
+a:hover{text-decoration:underline}
+table.t tr.hit td{background:var(--primary-50)} table.t tr.hit td:first-child{box-shadow:inset 3px 0 var(--primary)}
+.crumb{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-weight:600}
+.chip{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 6px 0 12px;border-radius:14px;background:var(--primary-50);color:var(--primary);font-size:13px}
+.chip button{border:0;background:none;color:inherit;font-size:14px;padding:0 4px}
+.rel{display:flex;gap:6px 16px;flex-wrap:wrap;align-items:center;padding:10px 16px;border-bottom:1px solid var(--line);font-size:13px}
+.ph-notes .n{width:28px;height:28px;border-radius:14px;background:var(--primary);color:#fff;display:grid;place-items:center;font-weight:700;flex-shrink:0}
+</style>
+</head>
+<body>
+<div class="app sidenav">
+  <header class="app-head">
+    <div class="app-title">
+      <span class="app-icon" style="background:#FDECEC">✂️</span>
+      <div><h1>Quản lý trải – cắt</h1><p>Hôm nay T6 06/11/2026 · Xưởng cắt · 8 bàn cắt (Bàn 01–08) · 55 công nhân</p></div>
+      <div class="actions"><button class="btn">⬇ Xuất Excel</button><button class="btn primary">＋ Lập lệnh cắt</button></div>
+    </div>
+    <nav class="tabs">
+      <button class="tab on" data-v="order">Order cắt</button>
+      <button class="tab" data-v="lenh">Lệnh cắt</button>
+      <button class="tab" data-v="phieu">Phiếu trải theo bàn</button>
+      <button class="tab" data-v="cuon">Cuộn vải đã quét</button>
+      <button class="tab" data-v="hh">Hao hụt vải</button>
+      <button class="tab" data-v="bo">Bó hàng giao chuyền</button>
+      <button class="tab" data-v="ns">Năng suất bàn cắt</button>
+      <button class="tab" data-v="dt">Màn hình công nhân 📱</button>
+    </nav>
+  </header>
+
+  <div class="app-body">
+    <div class="crumb" id="crumb" style="display:none"></div>
+    <!-- ============ ORDER CẮT ============ -->
+    <section class="view on" id="order">
+      <div class="kpis">
+        <div class="kpi"><div class="l">Đơn đang cắt</div><div class="v num" id="k-don"></div><div class="s muted">trong 22 đơn đang chạy · cắt cấp cho 15 chuyền</div></div>
+        <div class="kpi"><div class="l">SP cần cắt (6 đơn)</div><div class="v num" id="k-can"></div><div class="s muted">Đã cộng % hao hụt cho phép</div></div>
+        <div class="kpi"><div class="l">SP đã cắt</div><div class="v num" id="k-da"></div><div class="s muted" id="k-pc"></div></div>
+        <div class="kpi"><div class="l">Lệnh cắt hôm nay</div><div class="v num" id="k-lc"></div><div class="s muted" id="k-lcs"></div></div>
+      </div>
+      <div class="card">
+        <div class="card-h"><h3>Đơn hàng chờ cắt</h3><span class="r muted">Bấm vào đơn để xem chi tiết màu × size</span></div>
+        <div class="tbl-wrap"><table class="t">
+          <thead><tr><th>Order (PO)</th><th>Khách hàng</th><th>Mã hàng</th><th class="right">SL đặt</th><th class="right">Hao hụt cho phép</th><th class="right">SL cần cắt</th><th class="right">Đã cắt</th><th>Tiến độ</th><th>Giao hàng</th></tr></thead>
+          <tbody id="o-rows"></tbody>
+        </table></div>
+      </div>
+      <div class="card">
+        <div class="card-h"><h3 id="m-title"></h3><span class="r" id="m-sd"></span></div>
+        <div class="rel" id="m-rel"></div>
+        <div class="tbl-wrap"><table class="t" id="m-tbl"></table></div>
+      </div>
+      <div class="card">
+        <div class="card-h"><h3>Chi tiết theo màu × size</h3><span class="r muted">Lớp cần = SL cần cắt ÷ số sp size đó trên 1 lớp sơ đồ</span></div>
+        <div class="tbl-wrap"><table class="t" id="d-tbl"></table></div>
+      </div>
+      <div class="note">ⓘ Size có "Lớp còn lại" lớn hơn các size khác sẽ được bù bằng sơ đồ phụ ở lệnh cắt cuối.</div>
+    </section>
+
+    <!-- ============ LỆNH CẮT ============ -->
+    <section class="view" id="lenh">
+      <div class="card">
+        <div class="card-h"><h3>Lệnh cắt ngày 06/11/2026</h3><span class="r muted">Mỗi màu là 1 lần trải trên bàn</span></div>
+        <div class="tbl-wrap"><table class="t">
+          <thead><tr><th>Lệnh cắt</th><th>Order (PO)</th><th>Mã hàng</th><th>Bàn</th><th>Sơ đồ</th><th class="right">Dài sơ đồ</th><th class="right">Khổ</th><th class="right">Hiệu suất</th><th>Tỉ lệ size</th><th>Màu · lớp</th><th class="right">SP kế hoạch</th><th class="right">Mét vải cần</th></tr></thead>
+          <tbody id="l-rows"></tbody>
+        </table></div>
+      </div>
+      <div class="note">ⓘ Bấm vào lệnh cắt để xem toàn bộ phiếu: thông tin sơ đồ, số sp từng size, mét vải và chi tiết từng lần trải.</div>
+    </section>
+
+    <!-- ============ PHIẾU TRẢI ============ -->
+    <section class="view" id="phieu">
+      <div class="kpis" id="p-kpi"></div>
+      <div class="card">
+        <div class="card-h">
+          <div class="toolbar" style="width:100%">
+            <select class="field"><option>Hôm nay 06/11</option></select>
+            <select class="field"><option>Tất cả bàn cắt</option><option>Bàn 01</option><option>Bàn 02</option><option>Bàn 03</option><option>Bàn 04</option><option>Bàn 05</option><option>Bàn 06</option><option>Bàn 07</option><option>Bàn 08</option></select>
+            <select class="field"><option>Tất cả trạng thái</option><option>Đang trải</option><option>Đã xong</option></select>
+            <span class="grow"></span>
+            <span class="badge b-info">Số liệu về ngay khi công nhân bấm xác nhận</span>
+          </div>
+        </div>
+        <div class="tbl-wrap"><table class="t">
+          <thead><tr><th>Phiếu trải</th><th>Bàn</th><th>Order · mã hàng · màu</th><th>Người trải</th><th>Lớp thực tế / kế hoạch</th><th class="right">Dài lớp</th><th class="right">Tổng dài trải</th><th class="right">Cuộn</th><th class="right">Tiêu thụ</th><th class="right">So định mức</th><th>Giờ</th><th>Trạng thái</th></tr></thead>
+          <tbody id="p-rows"></tbody>
+        </table></div>
+      </div>
+      <div class="note">ⓘ Bấm vào một phiếu để xem phiếu cắt đầy đủ và từng cuộn vải đã trải.</div>
+    </section>
+
+    <!-- ============ CUỘN VẢI ============ -->
+    <section class="view" id="cuon">
+      <div class="card">
+        <div class="card-h"><h3>Cuộn vải đã quét hôm nay</h3><span class="r muted" id="c-sum"></span></div>
+        <div class="tbl-wrap"><table class="t">
+          <thead><tr><th>Mã cuộn</th><th>Phiếu trải · bàn</th><th>Màu</th><th>Lô nhuộm · shade</th><th class="right">Mét trên tem</th><th class="right">Mét đo thực</th><th class="right">Lớp trải</th><th class="right">Mét dùng</th><th class="right">Còn lại</th><th>Ghi chú</th></tr></thead>
+          <tbody id="c-rows"></tbody>
+        </table></div>
+      </div>
+    </section>
+
+    <!-- ============ HAO HỤT ============ -->
+    <section class="view" id="hh">
+      <div class="card">
+        <div class="card-h"><h3>Hao hụt theo đơn hàng — hôm nay</h3><span class="r muted">Định mức = lớp × dài sơ đồ × 1,02</span></div>
+        <div class="tbl-wrap"><table class="t">
+          <thead><tr><th>Order · mã hàng</th><th class="right">Lớp trải</th><th class="right">Dài trải (m)</th><th class="right">Đầu bàn (m)</th><th class="right">Đầu tấm (m)</th><th class="right">Trả kho (m)</th><th class="right">Tiêu thụ (m)</th><th class="right">Định mức (m)</th><th class="right">Chênh lệch</th><th class="right">Hao hụt</th></tr></thead>
+          <tbody id="h-rows"></tbody>
+        </table></div>
+      </div>
+      <div class="card">
+        <div class="card-h"><h3>Hao hụt theo bàn cắt — tuần 45</h3><span class="r muted">Mục tiêu ≤ 2,0%</span></div>
+        <div class="list" id="h-ban"></div>
+      </div>
+    </section>
+
+    <!-- ============ BÓ HÀNG ============ -->
+    <section class="view" id="bo">
+      <div class="toolbar">
+        <select class="field" id="b-sel"></select><span id="b-lk"></span>
+        <span class="grow"></span>
+        <span class="badge b-info">Đánh số bó tự động · tối đa 30 lớp/bó</span>
+      </div>
+      <div class="kpis" id="b-kpi"></div>
+      <div class="card">
+        <div class="tbl-wrap"><table class="t">
+          <thead><tr><th>Số bó</th><th>Size</th><th>Xấp</th><th>Lớp từ – đến</th><th class="right">Số sp/bó</th><th>Giao chuyền</th><th>Trạng thái</th></tr></thead>
+          <tbody id="b-rows"></tbody>
+        </table></div>
+      </div>
+      <div class="note">ⓘ Size có 2 sp trên 1 lớp sơ đồ cắt ra 2 xấp — mỗi xấp đánh số bó riêng.</div>
+    </section>
+
+    <!-- ============ NĂNG SUẤT ============ -->
+    <section class="view" id="ns">
+      <div class="card">
+        <div class="card-h"><h3>Năng suất bàn cắt — tuần 45</h3><span class="r muted">Tính tự động từ phiếu trải đã xác nhận</span></div>
+        <div class="tbl-wrap"><table class="t">
+          <thead><tr><th>Bàn</th><th>Tổ trưởng</th><th class="right">Phiếu xong</th><th class="right">Lớp trải</th><th class="right">SP cắt</th><th class="right">Lớp/giờ</th><th class="right">Hao hụt</th><th>So với mục tiêu</th></tr></thead>
+          <tbody id="n-rows"></tbody>
+        </table></div>
+      </div>
+    </section>
+
+    <!-- ============ MÀN HÌNH CÔNG NHÂN ============ -->
+    <section class="view" id="dt">
+      <div class="phone-wrap">
+        <div class="phone">
+          <div class="ph-top"><div class="s" id="ph-s1"></div><div class="big" id="ph-big"></div>
+            <div class="bar" style="margin-top:10px;background:rgba(255,255,255,.3)"><i id="ph-bar" style="background:#fff"></i></div>
+            <div class="s" style="margin-top:8px" id="ph-s2"></div></div>
+          <div class="ph-b">
+            <div class="ph-scan"><div class="ic">📷</div>Bấm để quét tem cuộn vải</div>
+            <div class="ph-roll" id="ph-roll"></div>
+            <div class="ph-cnt"><span>Số lớp cuộn này</span><span style="display:flex;gap:12px;align-items:center"><button>−</button><b id="ph-n"></b><button>＋</button></span></div>
+            <button class="ph-btn">✓ Xác nhận</button>
+            <div class="muted" style="text-align:center;font-size:13px">Số lớp tự gợi ý = mét đo ÷ dài lớp — đúng thì chỉ cần bấm Xác nhận</div>
+          </div>
+        </div>
+        <div class="ph-notes">
+          <div class="card"><div class="card-b"><span class="n">1</span><div><b>Mở app, thấy phiếu của bàn mình</b><div class="muted">Không cần tìm phiếu giấy.</div></div></div></div>
+          <div class="card"><div class="card-b"><span class="n">2</span><div><b>Quét tem cuộn vải</b><div class="muted">Cuộn lấy thêm tự gắn nhãn "Phát sinh".</div></div></div></div>
+          <div class="card"><div class="card-b"><span class="n">3</span><div><b>Nhập mét đo & đầu tấm khi hết cuộn</b><div class="muted">App tự tính hao hụt, không phải cộng tay.</div></div></div></div>
+          <div class="card"><div class="card-b"><span class="n">4</span><div><b>Bấm 1 lần để xác nhận</b><div class="muted">Số liệu lên văn phòng chưa tới 5 phút.</div></div></div></div>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<aside class="drawer" id="drawer">
+  <div class="drawer-h"><span class="app-icon" style="background:#FDECEC">✂️</span><div><h3 id="dr-name"></h3><div class="muted" id="dr-sub"></div></div><button class="x" onclick="closeD()">×</button></div>
+  <div class="drawer-b" id="dr-b"></div>
+</aside>
+<div class="drawer-bg" id="dbg" onclick="closeD()"></div>
+
+<script>
+const f = (n,d=0) => n.toLocaleString("vi-VN",{minimumFractionDigits:d,maximumFractionDigits:d});
+const $ = id => document.getElementById(id);
+const sum = a => a.reduce((s,x)=>s+x,0);
+const DB = 0.06;        // 2 đầu bàn cộng thêm mỗi lớp (m)
+const DM = 1.02;        // định mức vải = lớp × dài sơ đồ × 1,02
+const TEM = [148,152,145,160,138,154,146,142,150,156];   // mét trên tem, cuộn ~150 m
+
+// Đơn hàng (cùng PO với Kế hoạch sản xuất): sd = [tên sơ đồ, dài (m), khổ (cm), hiệu suất %], r = tỉ lệ size trên sơ đồ, c = [màu, SL đặt, lớp đã cắt trước hôm nay]
+const O = [
+  {po:"BM-7731",kh:"Bellmont Apparel (Mỹ)",ma:"SOMI-NU-1210",giao:"02/12/2026",ch:"Chuyền 07",hh:2,sz:["S","M","L","XL"],pct:[17,33,33,17],r:[2,4,4,2],sd:["SN1210-B12",13.85,145,83.5],c:[["Xanh nhạt",12000,820],["Trắng",8000,470]]},
+  {po:"KZ-3305",kh:"Kazeyama Sports (Nhật)",ma:"VAY-XOE-1105",giao:"21/11/2026",ch:"Chuyền 03",hh:3,sz:["S","M","L"],pct:[25,50,25],r:[2,4,2],sd:["VX1105-K8",14.20,150,79.6],c:[["Đỏ đô",8000,880],["Xanh rêu",6000,640]]},
+  {po:"CB-5120",kh:"Coral Bay Clothing (Úc)",ma:"AO-THUN-2402",giao:"28/11/2026",ch:"Chuyền 10",hh:1.5,sz:["S","M","L","XL","XXL"],pct:[8,25,25,25,17],r:[1,3,3,3,2],sd:["AT2402-C12",12.36,180,88.2],c:[["Đen",12000,800],["Trắng",10000,640]]},
+  {po:"NL-8815",kh:"Northline Wear (Canada)",ma:"QUAN-KAKI-0932",giao:"17/12/2026",ch:"Chuyền 15",hh:2.5,sz:["30","31","32","33","34"],pct:[17,17,33,17,16],r:[2,2,4,2,2],sd:["QK0932-N12",15.60,150,84.1],c:[["Be",12000,420],["Đen",8000,280]]},
+  {po:"HB-6622",kh:"Hanbit Urban (Hàn Quốc)",ma:"AO-KHOAC-1150",giao:"04/12/2026",ch:"Chuyền 11",hh:2.5,sz:["M","L","XL"],pct:[25,50,25],r:[2,4,2],sd:["AK1150-H8",16.80,150,81.2],c:[["Xám",10800,1100],["Đen",6000,600]]},
+  {po:"NV-4490",kh:"Nordvik Outdoor (Thụy Điển)",ma:"QUAN-SHORT-0715",giao:"24/11/2026",ch:"Chuyền 13",hh:2,sz:["28","30","32","34","36"],pct:[17,17,33,17,16],r:[2,2,4,2,2],sd:["QS0715-N12",11.40,150,85.6],c:[["Xanh navy",7200,545],["Kaki",6000,480]]},
+];
+// Lệnh cắt hôm nay: lays = [màu, lớp KH, lớp TT, người trải, bắt đầu, kết thúc]
+const L = [
+  {id:"LC-6061",o:0,ban:"Bàn 03",lays:[["Xanh nhạt",80,80,"Trần Văn Phúc","06:35","09:20"],["Trắng",90,34,"Trần Văn Phúc","09:35",""]]},
+  {id:"LC-6062",o:0,ban:"Bàn 04",lays:[["Xanh nhạt",90,90,"Phạm Thị Duyên","06:40","09:50"],["Trắng",90,0,"Phạm Thị Duyên","",""]]},
+  {id:"LC-6063",o:1,ban:"Bàn 01",lays:[["Đỏ đô",100,100,"Nguyễn Văn Tâm","06:30","09:40"],["Xanh rêu",100,40,"Nguyễn Văn Tâm","09:55",""]]},
+  {id:"LC-6064",o:2,ban:"Bàn 05",lays:[["Đen",100,100,"Võ Văn Lực","06:30","09:05"],["Trắng",100,52,"Võ Văn Lực","09:20",""]]},
+  {id:"LC-6065",o:2,ban:"Bàn 08",lays:[["Đen",100,100,"Bùi Văn Quang","06:30","08:50"],["Trắng",100,70,"Bùi Văn Quang","09:00",""]]},
+  {id:"LC-6066",o:3,ban:"Bàn 06",lays:[["Be",90,90,"Ngô Thị Lan","06:45","09:45"],["Đen",90,0,"Ngô Thị Lan","",""]]},
+  {id:"LC-6067",o:4,ban:"Bàn 07",lays:[["Xám",80,80,"Lê Thị Hạnh","06:50","09:35"],["Đen",80,0,"Lê Thị Hạnh","",""]]},
+  {id:"LC-6068",o:5,ban:"Bàn 02",lays:[["Xanh navy",80,80,"Lê Văn Bình","06:40","09:10"],["Kaki",80,28,"Lê Văn Bình","09:25",""]]},
+];
+
+// ---------- tính toán ----------
+O.forEach(o=>{ o.R = sum(o.r); o.cells = o.c.map(c=>o.pct.map(p=>Math.round(c[1]*p/100))); });
+const LAYS = [];
+function mkRolls(y){
+  const s=y.s, DL=y.DL;
+  // trải lần lượt từng cuộn theo mét đo thực đến đủ số lớp
+  const run=(n,meas=true)=>{ const out=[]; let left=n,k=0;
+    while(left>0){ const tem=TEM[(s*3+k)%10], m=meas?+(tem-((s+k)%4)*0.5-(k===1&&s%2===0?6:0)).toFixed(1):tem;
+      const c=Math.min(Math.floor((m-0.2)/DL),left); out.push({k,tem,m,n:c,rem:+(m-c*DL).toFixed(2)}); left-=c; k++; }
+    return out; };
+  const nPlan=Math.ceil(y.kh*DL/150), r=run(y.tt,true); // kho cấp số cuộn theo mét cần ÷ 150 m/cuộn
+  r.forEach((x,i)=>{ x.ps=i>=nPlan; x.ma="CV-"+(58800+s*37+x.k);
+    x.lot=(x.ps?"Lô 0"+(60+s%3)+" · gần chuẩn":"Lô 0"+(23+s%5)+" · chuẩn");
+    x.kind = (y.tt<y.kh && i===r.length-1) ? "dang" : x.rem>=8 ? "tra" : "dt"; });
+  return r;
+}
+L.forEach(lc=>{ const o=O[lc.o]; lc.O=o; lc.DL=+(o.sd[1]+DB).toFixed(2);
+  lc.lays=lc.lays.map((a,j)=>{ const y={id:lc.id+"/"+(j+1),lc,o,mau:a[0],kh:a[1],tt:a[2],ng:a[3],bd:a[4],kt:a[5],s:LAYS.length,DL:lc.DL};
+    y.rolls=mkRolls(y);
+    y.dai=y.tt*y.DL; y.dauban=y.tt*DB;
+    y.dt=sum(y.rolls.filter(x=>x.kind==="dt").map(x=>x.rem)); y.tra=sum(y.rolls.filter(x=>x.kind==="tra").map(x=>x.rem));
+    y.tieu=y.dai+y.dt; y.dm=y.tt*o.sd[1]*DM; y.ch=y.tieu-y.dm; y.hh=y.tt?(y.dt+y.dauban)/y.tieu*100:0;
+    y.st = y.tt>=y.kh?["Đã xong","b-ok"]:y.tt>0?["Đang trải","b-info"]:["Chờ trải","b-gray"];
+    LAYS.push(y); return y; }); });
+// lớp đã cắt theo màu = trước hôm nay + lớp thực tế hôm nay
+O.forEach(o=>o.c.forEach(c=>{ c.done=c[2]+sum(LAYS.filter(y=>y.o===o&&y.mau===c[0]).map(y=>y.tt)); }));
+const need=(o,q)=>Math.ceil(q*(1+o.hh/100));
+O.forEach(o=>{ o.qty=sum(o.cells.flat()); o.can=sum(o.cells.map(r=>sum(r.map(q=>need(o,q)))));
+  o.da=sum(o.c.map((c,ci)=>sum(o.r.map((r,si)=>Math.min(c.done*r,need(o,o.cells[ci][si])))))); });
+console.assert(LAYS.every(y=>sum(y.rolls.map(x=>x.n))===y.tt), "lớp cuộn ≠ lớp phiếu");
+console.assert(LAYS.every(y=>Math.abs(sum(y.rolls.map(x=>x.m-x.rem))-y.dai)<0.01), "mét dùng ≠ lớp × dài lớp");
+
+const ratio = o => `<span class="ratio">${o.sz.map((s,i)=>`<span>${s}×${o.r[i]}</span>`).join("")}</span> <span class="muted">= ${o.R} sp/lớp</span>`;
+const prog = (a,b) => { const p=b?Math.min(100,Math.round(a/b*100)):0; return `<div style="display:flex;gap:8px;align-items:center"><div class="bar ${p>=100?"ok":""}" style="flex:1"><i style="width:${p}%"></i></div><span class="num">${p}%</span></div>`; };
+// link trong bảng: chặn click của dòng (tr.click) để không mở drawer chồng
+const lk = (txt,js) => `<a href="#" onclick="event.stopPropagation();${js};return false">${txt}</a>`;
+const hhO = o => { const ys=LAYS.filter(y=>y.o===o&&y.tt), g=k=>sum(ys.map(y=>y[k])); return {ys,g,hh:ys.length?(g("dt")+g("dauban"))/g("tieu")*100:null}; };
+const chg = (y) => y.tt?`<span class="${y.ch>0?"bad":"ok"}">${y.ch>0?"+":""}${f(y.ch,1)} m</span>`:"—";
+
+// ---------- ORDER CẮT ----------
+$("k-don").textContent=O.length; $("k-lc").textContent=L.length; $("k-lcs").textContent=`${LAYS.length} lần trải trên ${new Set(L.map(lc=>lc.ban)).size} bàn · KH ${f(sum(LAYS.map(y=>y.kh*y.o.R)))} sp`;
+$("k-can").textContent=f(sum(O.map(o=>o.can))); $("k-da").textContent=f(sum(O.map(o=>o.da)));
+$("k-pc").textContent=Math.round(sum(O.map(o=>o.da))/sum(O.map(o=>o.can))*100)+"% số cần cắt";
+function showOrder(i){
+  const o=O[i];
+  $("o-rows").innerHTML=O.map((o,j)=>`<tr class="click ${j===i?"sel":""}" onclick="showOrder(${j})"><td><b>${o.po}</b></td><td>${o.kh}</td><td>${o.ma}</td><td class="right num">${f(o.qty)}</td><td class="right num">${f(o.hh,1)}%</td><td class="right num">${f(o.can)}</td><td class="right num">${f(o.da)}</td><td style="min-width:140px">${prog(o.da,o.can)}</td><td>${o.giao}</td></tr>`).join("");
+  $("m-title").textContent=`Tỉ lệ màu × size — ${o.po} · ${o.ma}`;
+  $("m-sd").innerHTML=`<span class="muted">Sơ đồ ${o.sd[0]} ·</span> ${ratio(o)}`;
+  const colT=o.sz.map((_,si)=>sum(o.cells.map(r=>r[si])));
+  const G=(v,x)=>`goto('${v}',{o:${i}${x||""}})`, M=m=>`,mau:'${m}'`, S=s=>`,sz:'${s}'`;
+  const rel=[["lenh","lệnh cắt",L.filter(lc=>lc.o===i).length],["phieu","phiếu trải",LAYS.filter(y=>y.o===o).length],["cuon","cuộn vải",rolls.filter(x=>x.y.o===o).length],["bo","bó hàng",sum(fin.filter(y=>y.o===o).map(y=>o.R*Math.ceil(y.tt/30)))]], hh=hhO(o).hh;
+  $("m-rel").innerHTML=`<span class="muted">Liên quan:</span>`+rel.map(([v,t,n])=>n?lk(`${n} ${t}`,G(v)):`<span class="muted">0 ${t}</span>`).join(" · ")+" · "+(hh===null?'<span class="muted">hao hụt —</span>':lk(`hao hụt ${f(hh,1)}%`,G("hh")));
+  $("m-tbl").innerHTML=`<thead><tr><th>Màu \\ Size</th>${o.sz.map(s=>`<th class="right">${lk(s,G("bo",S(s)))}</th>`).join("")}<th class="right">Tổng đặt</th><th class="right">Cần cắt (+${f(o.hh,1)}%)</th><th class="right">Lớp cần</th><th class="right">Lớp đã cắt</th><th class="right">Lớp còn lại</th><th class="right">Lần trải còn (≤100 lớp)</th><th>Lệnh cắt hôm nay</th></tr></thead><tbody>`+
+    o.c.map((c,ci)=>{ const lc=Math.max(...o.cells[ci].map((q,si)=>Math.ceil(need(o,q)/o.r[si]))), con=Math.max(0,lc-c.done);
+      const m=c[0], lcs=L.filter(lc=>lc.o===i&&lc.lays.some(y=>y.mau===m));
+      return `<tr><td>${lk(`<b>${m}</b>`,G("phieu",M(m)))}</td>${o.cells[ci].map((q,si)=>`<td class="right num">${lk(f(q),G("bo",M(m)+S(o.sz[si])))}</td>`).join("")}<td class="right num"><b>${f(sum(o.cells[ci]))}</b></td><td class="right num">${f(sum(o.cells[ci].map(q=>need(o,q))))}</td><td class="right num">${f(lc)}</td><td class="right num">${lk(f(c.done),G("phieu",M(m)))}</td><td class="right num ${con?"":"ok"}">${con?lk(f(con),G("lenh",M(m))):"✓ Đủ"}</td><td class="right num">${Math.ceil(con/100)}</td><td>${lcs.map(lc=>lk(lc.id,G("lenh",M(m)+`,lc:'${lc.id}'`))).join(", ")||'<span class="muted">—</span>'}</td></tr>`; }).join("")+
+    `</tbody><tfoot><tr><td>Tổng</td>${colT.map(q=>`<td class="right num">${f(q)}</td>`).join("")}<td class="right num">${f(o.qty)}</td><td class="right num">${f(o.can)}</td><td colspan="5"></td></tr><tr><td class="muted">Tỉ lệ size</td>${colT.map(q=>`<td class="right num muted">${f(q/o.qty*100,1)}%</td>`).join("")}<td colspan="7"></td></tr></tfoot>`;
+  $("d-tbl").innerHTML=`<thead><tr><th>Màu</th><th>Size</th><th class="right">SL đặt</th><th class="right">Hao hụt cho phép</th><th class="right">SL cần cắt</th><th class="right">Sp size này/lớp</th><th class="right">Lớp cần</th><th class="right">Lớp đã cắt</th><th class="right">Lớp còn lại</th><th class="right">SP đã cắt</th><th class="right">SP còn thiếu</th><th>Tiến độ</th></tr></thead><tbody>`+
+    o.c.map((c,ci)=>o.sz.map((s,si)=>{ const q=o.cells[ci][si], n=need(o,q), lc=Math.ceil(n/o.r[si]), dc=c.done*o.r[si], m=c[0];
+      return `<tr><td>${si?"":lk(`<b>${m}</b>`,G("phieu",M(m)))}</td><td>${lk(`<b>${s}</b>`,G("bo",M(m)+S(s)))}</td><td class="right num">${f(q)}</td><td class="right num">+${f(n-q)}</td><td class="right num">${f(n)}</td><td class="right num">${o.r[si]}</td><td class="right num">${f(lc)}</td><td class="right num">${lk(f(c.done),G("phieu",M(m)))}</td><td class="right num">${lc>c.done?lk(f(lc-c.done),G("lenh",M(m))):'<span class="ok">0</span>'}</td><td class="right num">${f(Math.min(dc,n))}</td><td class="right num">${n>dc?f(n-dc):'<span class="ok">0</span>'}</td><td style="min-width:130px">${prog(dc,n)}</td></tr>`; }).join("")).join("")+`</tbody>`;
+}
+
+// ---------- LỆNH CẮT ----------
+const lcSp = lc => sum(lc.lays.map(y=>y.kh*lc.O.R)), lcM = lc => sum(lc.lays.map(y=>y.kh*lc.DL));
+$("l-rows").innerHTML=L.map((lc,i)=>{ const o=lc.O; return `<tr class="click" data-o="${lc.o}" data-m="${lc.lays.map(y=>y.mau).join("|")}" data-lc="${lc.id}" onclick="openLC(${i})"><td><b>${lc.id}</b></td><td>${lk(o.po,`goto('order',{o:${lc.o}})`)}</td><td>${o.ma}</td><td>${lc.ban}</td><td>${o.sd[0]}</td><td class="right num">${f(o.sd[1],2)} m</td><td class="right num">${o.sd[2]} cm</td><td class="right num">${f(o.sd[3],1)}%</td><td>${ratio(o)}</td><td>${lc.lays.map(y=>`${y.mau} · ${y.kh}`).join("<br>")}</td><td class="right num">${f(lcSp(lc))}</td><td class="right num">${f(lcM(lc),1)}</td></tr>`; }).join("");
+
+// ---------- PHIẾU TRẢI ----------
+const ttAll=sum(LAYS.map(y=>y.tt)), khAll=sum(LAYS.map(y=>y.kh)), rolls=LAYS.flatMap(y=>y.rolls.map(x=>({...x,y}))), done=LAYS.filter(y=>y.tt);
+const hhAll=sum(done.map(y=>y.dt+y.dauban))/sum(done.map(y=>y.tieu))*100;
+$("p-kpi").innerHTML=`<div class="kpi"><div class="l">Phiếu trải hôm nay</div><div class="v num">${LAYS.length}</div><div class="s muted">${LAYS.filter(y=>y.st[0]==="Đã xong").length} xong · ${LAYS.filter(y=>y.st[0]==="Đang trải").length} đang trải · ${LAYS.filter(y=>!y.tt).length} chờ</div></div>
+<div class="kpi"><div class="l">Lớp đã trải</div><div class="v num">${f(ttAll)}/${f(khAll)}</div><div class="s muted">${Math.round(ttAll/khAll*100)}% kế hoạch ngày</div></div>
+<div class="kpi"><div class="l">Cuộn phát sinh</div><div class="v num warn">${rolls.filter(x=>x.ps).length}</div><div class="s muted">Lấy thêm ngoài kế hoạch / ${rolls.length} cuộn</div></div>
+<div class="kpi"><div class="l">Hao hụt bình quân</div><div class="v num">${f(hhAll,1)}%</div><div class="s muted">Đầu bàn + đầu tấm</div></div>`;
+$("p-rows").innerHTML=LAYS.map(y=>`<tr class="click" data-o="${y.lc.o}" data-m="${y.mau}" data-lc="${y.lc.id}" onclick="openLC(${L.indexOf(y.lc)},'${y.id}')"><td><b>${y.id}</b></td><td>${lk(y.lc.ban,`openLC(${L.indexOf(y.lc)})`)}</td><td>${lk(y.o.po,`goto('order',{o:${y.lc.o}})`)} · ${y.o.ma} · ${y.mau}</td><td>${y.ng}</td>
+  <td style="min-width:170px"><div style="display:flex;gap:8px;align-items:center"><div class="bar ${y.tt>=y.kh?"ok":""}" style="flex:1"><i style="width:${Math.round(y.tt/y.kh*100)}%"></i></div><span class="num">${y.tt}/${y.kh}</span></div></td>
+  <td class="right num">${f(y.DL,2)} m</td><td class="right num">${f(y.dai,1)} m</td><td class="right">${y.rolls.length}${y.rolls.some(x=>x.ps)?` <span class="badge b-warn">+${y.rolls.filter(x=>x.ps).length} phát sinh</span>`:""}</td>
+  <td class="right num">${y.tt?f(y.tieu,1)+" m":"—"}</td><td class="right num">${y.st[0]==="Đã xong"?chg(y):"—"}</td><td>${y.bd?y.bd+" – "+(y.kt||"…"):"—"}</td><td><span class="badge ${y.st[1]}">${y.st[0]}</span></td></tr>`).join("");
+
+// ---------- CUỘN VẢI ----------
+const note = x => x.kind==="dang"?'<span class="badge b-info">Đang trải</span>':x.ps?'<span class="badge b-warn">＋ Phát sinh</span>':'<span class="badge b-gray">Theo kế hoạch</span>';
+const remTxt = x => x.kind==="dang"?"đang dùng":x.kind==="tra"?`${f(x.rem,1)} · trả kho`:`${f(x.rem,1)} · đầu tấm`;
+$("c-sum").textContent=`${rolls.length} cuộn · ${rolls.filter(x=>x.ps).length} cuộn phát sinh · ${rolls.filter(x=>x.tem-x.m>=1).length} cuộn ngắn hơn tem ≥ 1 m`;
+$("c-rows").innerHTML=rolls.map(x=>`<tr data-o="${x.y.lc.o}" data-m="${x.y.mau}" data-lc="${x.y.lc.id}"><td><b>${x.ma}</b></td><td>${lk(x.y.id,`openLC(${L.indexOf(x.y.lc)},'${x.y.id}')`)} · ${lk(x.y.lc.ban,`openLC(${L.indexOf(x.y.lc)})`)}</td><td>${x.y.mau}</td><td>${x.lot}</td><td class="right num">${f(x.tem,1)}</td><td class="right num ${x.tem-x.m>=1?"bad":""}">${f(x.m,1)}</td><td class="right num">${x.n}</td><td class="right num">${f(x.m-x.rem,1)}</td><td class="right num">${remTxt(x)}</td><td>${note(x)}${x.tem-x.m>=1?` <span class="badge b-bad">Ngắn hơn tem ${f(x.tem-x.m,1)} m</span>`:""}</td></tr>`).join("");
+
+// ---------- HAO HỤT ----------
+$("h-rows").innerHTML=O.map((o,i)=>{ const {ys,g,hh}=hhO(o); if(!ys.length) return "";
+  const ch=g("ch");
+  return `<tr data-o="${i}"><td>${lk(`<b>${o.po}</b>`,`goto('order',{o:${i}})`)} · ${o.ma}</td><td class="right num">${f(g("tt"))}</td><td class="right num">${f(g("dai"),1)}</td><td class="right num">${f(g("dauban"),1)}</td><td class="right num">${f(g("dt"),1)}</td><td class="right num">${f(g("tra"),1)}</td><td class="right num">${f(g("tieu"),1)}</td><td class="right num">${f(g("dm"),1)}</td><td class="right num ${ch>0?"bad":"ok"}">${ch>0?"+":""}${f(ch,1)}</td><td class="right num ${hh>2?"bad":"ok"}">${f(hh,1)}%</td></tr>`; }).join("");
+// [tổ trưởng, phiếu xong, lớp trải, lớp/giờ, % mục tiêu, hao hụt %]
+const BAN=[["Nguyễn Văn Tâm",9,820,24,96,1.9],["Lê Văn Bình",8,760,22,88,2.3],["Trần Văn Phúc",9,830,25,104,1.6],["Phạm Thị Duyên",8,740,22,86,2.1],
+  ["Võ Văn Lực",10,900,27,112,1.5],["Ngô Thị Lan",8,770,23,92,1.8],["Lê Thị Hạnh",8,720,21,84,2.4],["Máy cắt tự động",11,960,30,120,1.3]];
+const bsp=[8,12,12,12,12,12,8,12]; // sp/lớp của sơ đồ chạy nhiều nhất tại bàn (khớp lệnh cắt hôm nay)
+console.assert(BAN.length===8 && L.every(lc=>bsp[+lc.ban.slice(4)-1]===lc.O.R), "8 bàn, sp/lớp khớp lệnh cắt");
+$("h-ban").innerHTML=BAN.map((b,i)=>`<div class="li"><div style="flex:1">Bàn ${String(i+1).padStart(2,"0")}</div><div class="bar ${b[5]>2.2?"bad":b[5]>2?"warn":"ok"}" style="flex:2"><i style="width:${b[5]/3*100}%"></i></div><b class="num ${b[5]>2.2?"bad":""}" style="width:48px;text-align:right">${f(b[5],1)}%</b></div>`).join("");
+$("n-rows").innerHTML=BAN.map((b,i)=>`<tr><td><b>Bàn ${String(i+1).padStart(2,"0")}</b></td><td>${b[0]}</td><td class="right">${b[1]}</td><td class="right num">${f(b[2])}</td><td class="right num">${f(b[2]*bsp[i])}</td><td class="right">${b[3]}</td><td class="right num">${f(b[5],1)}%</td><td><span class="badge ${b[4]>=95?"b-ok":"b-warn"}">${b[4]}%</span></td></tr>`).join("")+
+  `<tr class="grp"><td colspan="2">Tổng ${BAN.length} bàn</td><td class="right">${sum(BAN.map(b=>b[1]))}</td><td class="right num">${f(sum(BAN.map(b=>b[2])))}</td><td class="right num">${f(sum(BAN.map((b,i)=>b[2]*bsp[i])))}</td><td colspan="3"></td></tr>`;
+
+// ---------- BÓ HÀNG ----------
+const fin=LAYS.filter(y=>y.st[0]==="Đã xong");
+$("b-sel").innerHTML=fin.map((y,i)=>`<option value="${i}">${y.id} · ${y.o.ma} · ${y.mau} · ${y.tt} lớp</option>`).join("");
+function showBo(i){
+  const y=fin[i], o=y.o, rows=[]; let no=0;
+  o.sz.forEach((s,si)=>{ for(let x=1;x<=o.r[si];x++) for(let a=1;a<=y.tt;a+=30){ const b=Math.min(a+29,y.tt); no++;
+    rows.push(`<tr data-o="${y.lc.o}" data-m="${y.mau}" data-sz="${s}" data-lc="${y.lc.id}"><td><b>B-${y.lc.id.slice(3)}${y.id.slice(-2).replace("/","-")}-${String(no).padStart(3,"0")}</b></td><td><b>${s}</b></td><td>Xấp ${x}/${o.r[si]}</td><td class="num">${a} – ${b}</td><td class="right num">${b-a+1}</td><td>${o.ch}</td><td>${no<=4?'<span class="badge b-ok">✓ Chuyền đã nhận</span>':no<=8?'<span class="badge b-info">Đang giao</span>':'<span class="badge b-gray">Chờ giao</span>'}</td></tr>`); } });
+  $("b-kpi").innerHTML=`<div class="kpi"><div class="l">Tổng sp cắt</div><div class="v num">${f(y.tt*o.R)}</div><div class="s muted">${y.tt} lớp × ${o.R} sp/lớp</div></div>`+o.sz.map((s,si)=>`<div class="kpi"><div class="l">Size ${s}</div><div class="v num">${f(y.tt*o.r[si])}</div><div class="s muted">${o.r[si]} xấp × ${y.tt} lớp</div></div>`).join("")+`<div class="kpi"><div class="l">Số bó</div><div class="v num">${no}</div><div class="s muted">Giao ${o.ch}</div></div>`;
+  $("b-rows").innerHTML=rows.join("");
+  $("b-lk").innerHTML=`${lk(o.po,`goto('order',{o:${y.lc.o}})`)} · ${lk(y.lc.id,`openLC(${L.indexOf(y.lc)},'${y.id}')`)} · ${y.lc.ban}`;
+  applyF();
+}
+$("b-sel").onchange=e=>showBo(+e.target.value); showBo(0);
+
+// ---------- DRAWER: phiếu cắt + chi tiết trải ----------
+function layHTML(y){
+  if(!y.tt) return `<div class="lay"><h4>Phiếu trải ${y.id} · ${y.mau} <span class="badge b-gray">Chờ trải</span></h4><div class="muted">Kế hoạch ${y.kh} lớp · chưa quét cuộn nào.</div></div>`;
+  const kv=[["Lớp kế hoạch / thực tế",`${y.kh} / ${y.tt}`],["Dài lớp",f(y.DL,2)+" m"],["Tổng chiều dài trải",f(y.dai,1)+" m"],["Người trải",y.ng],["Bắt đầu – kết thúc",`${y.bd} – ${y.kt||"đang trải"}`],["Hao hụt đầu bàn",f(y.dauban,1)+" m"],["Vải đầu tấm",f(y.dt,1)+" m"],["Đầu tấm dài trả kho",f(y.tra,1)+" m"],["Tổng mét tiêu thụ",f(y.tieu,1)+" m"],["Định mức",f(y.dm,1)+" m"],["Chênh lệch so định mức",chg(y)],["Hao hụt",f(y.hh,1)+"%"]];
+  return `<div class="lay"><h4>Phiếu trải ${y.id} · ${y.mau} <span class="badge ${y.st[1]}">${y.st[0]}</span></h4>
+  <div class="kv">${kv.map(k=>`<div>${k[0]}<b class="num">${k[1]}</b></div>`).join("")}</div>
+  <div class="tbl-wrap"><table class="t"><thead><tr><th>Mã cuộn</th><th>Lô nhuộm · shade</th><th class="right">Mét tem</th><th class="right">Mét đo</th><th class="right">Lớp</th><th class="right">Mét dùng</th><th class="right">Còn lại (m)</th><th></th></tr></thead><tbody>
+  ${y.rolls.map(x=>`<tr><td><b>${x.ma}</b></td><td>${x.lot}</td><td class="right num">${f(x.tem,1)}</td><td class="right num ${x.tem-x.m>=1?"bad":""}">${f(x.m,1)}</td><td class="right num">${x.n}</td><td class="right num">${f(x.m-x.rem,1)}</td><td class="right num">${remTxt(x)}</td><td>${note(x)}</td></tr>`).join("")}
+  </tbody><tfoot><tr><td colspan="2">${y.rolls.length} cuộn</td><td class="right num">${f(sum(y.rolls.map(x=>x.tem)),1)}</td><td class="right num">${f(sum(y.rolls.map(x=>x.m)),1)}</td><td class="right num">${y.tt}</td><td class="right num">${f(y.dai,1)}</td><td colspan="2"></td></tr></tfoot></table></div></div>`;
+}
+function openLC(i,layId){
+  const lc=L[i], o=lc.O, ys=layId?lc.lays.filter(y=>y.id===layId):lc.lays;
+  $("dr-name").textContent=layId?"Phiếu trải "+layId:"Lệnh cắt "+lc.id;
+  $("dr-sub").textContent=`${o.po} · ${o.ma} · ${lc.ban}`;
+  const hd=[["Order (PO)",lk(o.po,`goto('order',{o:${lc.o}})`)],["Khách hàng",o.kh],["Mã hàng",o.ma],["Lệnh cắt số",lc.id],["Ngày","06/11/2026"],["Bàn cắt",lc.ban],["Sơ đồ",o.sd[0]],["Chiều dài sơ đồ",f(o.sd[1],2)+" m"],["Khổ vải",o.sd[2]+" cm"],["Hiệu suất sơ đồ",f(o.sd[3],1)+"%"]];
+  $("dr-b").innerHTML=`<div class="sec">Phiếu cắt</div><div class="kv">${hd.map(k=>`<div>${k[0]}<b>${k[1]}</b></div>`).join("")}</div>
+  <div>Tỉ lệ size trên sơ đồ: ${ratio(o)}</div>
+  <div class="tbl-wrap"><table class="t"><thead><tr><th>Màu</th><th class="right">Số lớp</th><th class="right">SP/lớp</th>${o.sz.map(s=>`<th class="right">${s}</th>`).join("")}<th class="right">Tổng SP</th><th class="right">Mét vải cần</th></tr></thead><tbody>
+  ${lc.lays.map(y=>`<tr><td><b>${y.mau}</b></td><td class="right num">${y.kh}</td><td class="right num">${o.R}</td>${o.r.map(r=>`<td class="right num">${f(y.kh*r)}</td>`).join("")}<td class="right num"><b>${f(y.kh*o.R)}</b></td><td class="right num">${f(y.kh*lc.DL,1)}</td></tr>`).join("")}
+  </tbody><tfoot><tr><td>Tổng</td><td class="right num">${sum(lc.lays.map(y=>y.kh))}</td><td></td>${o.r.map(r=>`<td class="right num">${f(sum(lc.lays.map(y=>y.kh*r)))}</td>`).join("")}<td class="right num">${f(lcSp(lc))}</td><td class="right num">${f(lcM(lc),1)}</td></tr></tfoot></table></div>
+  <div class="formula">Tổng SP size = số lớp × số sp size đó trên sơ đồ · Mét vải cần = số lớp × (dài sơ đồ ${f(o.sd[1],2)} m + 2 đầu bàn ${f(DB,2)} m) = số lớp × ${f(lc.DL,2)} m</div>
+  <div class="sec">Chi tiết trải</div>${ys.map(layHTML).join("")}`;
+  $("drawer").classList.add("on"); $("dbg").classList.add("on");
+}
+function closeD(){ $("drawer").classList.remove("on"); $("dbg").classList.remove("on"); }
+
+// ---------- MÀN HÌNH CÔNG NHÂN ----------
+const py=LAYS.find(y=>y.id==="LC-6061/2"), cur=py.rolls[py.rolls.length-1];
+$("ph-s1").textContent=`${py.lc.ban} · Phiếu ${py.id}`; $("ph-big").textContent=`Lớp ${py.tt} / ${py.kh}`;
+$("ph-bar").style.width=Math.round(py.tt/py.kh*100)+"%"; $("ph-s2").textContent=`${py.o.ma} · ${py.mau} · Sơ đồ ${py.o.sd[0]} · ${f(py.DL,2)} m/lớp`;
+$("ph-roll").innerHTML=`<div class="muted" style="font-size:13px">Cuộn vừa quét</div><b>${cur.ma}</b> · tem ${f(cur.tem,1)} m · đo ${f(cur.m,1)} m<div class="muted" style="font-size:13px">${cur.lot}</div>${cur.ps?'<div><span class="badge b-warn">＋ Cuộn phát sinh — đã tự ghi nhận</span></div>':""}`;
+$("ph-n").textContent=Math.floor((cur.m-0.2)/py.DL);
+
+// ---------- ĐIỀU HƯỚNG: goto(tab, {o, mau?, sz?, lc?}) lọc theo đơn + tô dòng khớp ----------
+var F=null, curV="order"; // var: showBo() gọi applyF() lúc nạp trang, trước dòng này
+function goto(v,flt){
+  closeD(); curV=v; F=v==="order"?null:flt||null;
+  if(v==="order"&&flt) showOrder(flt.o);
+  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("on",t.dataset.v===v));
+  document.querySelectorAll(".view").forEach(e=>e.classList.toggle("on",e.id===v));
+  if(v==="bo") pickBo();
+  applyF(); scrollTo(0,0);
+}
+function pickBo(){
+  [...$("b-sel").options].forEach(op=>op.hidden=!!F&&fin[op.value].lc.o!==F.o);
+  if(!F) return;
+  let i=fin.findIndex(y=>y.lc.o===F.o&&(!F.mau||y.mau===F.mau)); if(i<0) i=fin.findIndex(y=>y.lc.o===F.o);
+  if(i<0){ $("b-kpi").innerHTML=$("b-lk").innerHTML=""; $("b-rows").innerHTML='<tr><td colspan="7" class="muted">Chưa có phiếu trải xong cho đơn này — chưa đánh số bó.</td></tr>'; return; }
+  $("b-sel").value=i; showBo(i);
+}
+function applyF(){
+  document.querySelectorAll("tr[data-o]").forEach(r=>{ const d=r.dataset, out=!!F&&+d.o!==F.o;
+    r.hidden=out;
+    r.classList.toggle("hit",!!F&&!out&&[["mau","m"],["sz","sz"],["lc","lc"]].every(([k,a])=>!F[k]||d[a]===undefined||d[a].split("|").includes(F[k])));
+  });
+  const c=$("crumb"); c.style.display=F&&curV!=="order"?"flex":"none"; if(!F) return;
+  c.innerHTML=lk(`← Quay lại Order ${O[F.o].po}`,`goto('order',{o:${F.o}})`)+
+    `<span class="chip">Đang lọc: ${[O[F.o].po,F.lc,F.mau,F.sz&&"Size "+F.sz].filter(Boolean).join(" · ")}<button title="Bỏ lọc" onclick="F=null;if(curV==='bo')pickBo();applyF()">✕</button></span>`;
+}
+document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>goto(t.dataset.v));
+showOrder(0);
+console.assert(O.every(o=>/^Chuyền (0[1-9]|1[0-5])$/.test(o.ch) && o.c.every((c,ci)=>c.done<=Math.max(...o.cells[ci].map((q,si)=>Math.ceil(need(o,q)/o.r[si]))))), "Chuyền 01–15, không cắt vượt số lớp cần");
+console.assert(sum(O.map(o=>LAYS.filter(y=>y.o===o).length))===LAYS.length && sum(O.map(o=>rolls.filter(x=>x.y.o===o).length))===rolls.length, "Liên quan không khớp tổng");
+</script>
+</body>
+</html>
