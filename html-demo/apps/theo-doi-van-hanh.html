@@ -1,0 +1,496 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Theo dõi vận hành</title>
+<link rel="stylesheet" href="../shared.css">
+<style>
+  .kpis{grid-template-columns:repeat(3,1fr)}@media (min-width:1200px){.kpis{grid-template-columns:repeat(6,1fr)}}@media (max-width:560px){.kpis{grid-template-columns:repeat(2,1fr)}}
+  .hb{display:grid;grid-template-columns:86px 1fr 52px;gap:10px;align-items:center;padding:6px 0;font-size:13px}
+  .hb .bar{height:12px}
+  .ask-box{display:flex;gap:8px} .ask-box .field{flex:1;min-width:0}
+  .answer{background:var(--violet-50);border-radius:10px;padding:12px 14px;line-height:1.6;display:none}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{border:1px solid var(--line);background:#fff;border-radius:15px;min-height:30px;padding:4px 12px;font-size:13px;text-align:left}
+  .chip:hover{border-color:var(--primary);color:var(--primary)}
+  svg text{font-family:inherit;font-size:12px;fill:var(--muted)}
+  svg text.k{fill:#374151} svg text.v{fill:var(--ink);font-weight:600}
+  svg text.k,svg text.v{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round}
+  svg text.hc{fill:#1F2937;font-size:11px}
+  .leg{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted)} .leg i{display:inline-block;width:14px;height:3px;vertical-align:middle;margin-right:4px}
+  .leg i.sq{width:10px;height:10px;border-radius:2px} .leg i.ds{height:0;background:none;border-top:2px dashed #374151}
+  /* lưới biểu đồ: 2 cột từ 1100px */
+  .charts{display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
+  @media (min-width:1100px){.charts{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  .charts .wide{grid-column:1/-1}
+  .stack{display:flex;flex-direction:column;gap:16px;min-width:0}
+  [data-ch] .card-h,.charts .card-h{flex-wrap:wrap}
+  .dn{display:flex;gap:20px;align-items:center;flex-wrap:wrap} .dn svg{width:170px;flex-shrink:0}
+  .dn ul{list-style:none;margin:0;padding:0;flex:1;min-width:220px}
+  .dn li{display:grid;grid-template-columns:12px 1fr auto;gap:0 8px;align-items:center;padding:5px 0;border-bottom:1px dashed var(--line);font-size:13px}
+  .dn li i{width:12px;height:12px;border-radius:3px} .dn li .muted{grid-column:2/-1;font-size:12px}
+  /* AI nhận định */
+  .ai{background:linear-gradient(135deg,#F5F0FF,#fff 60%);border-color:#DDD0FB}
+  .ai .card-h{border-color:#E9E0FC}
+  .ins{display:flex;gap:12px;align-items:flex-start;padding:12px 16px;border-bottom:1px solid #EFE9FC;font-size:15px;line-height:1.5}
+  .ins:last-child{border-bottom:0}
+  .ins .sv{width:10px;height:10px;border-radius:5px;margin-top:7px;flex-shrink:0}
+  .ins a{white-space:nowrap;font-weight:600;font-size:14px;margin-left:auto;padding-left:8px}
+  .sv.cao{background:#EF4444} .sv.tb{background:#F59E0B} .sv.thap{background:#22C55E}
+  /* thẻ quyết định */
+  .dec{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;padding:16px}
+  .dc{border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px;border-left:4px solid #F59E0B}
+  .dc.cao{border-left-color:#EF4444}
+  .dc h4{margin:0;font-size:15px;line-height:1.4} .dc p{margin:0;font-size:13px;color:var(--muted);line-height:1.5}
+  .dc .imp{font-size:16px;font-weight:700;color:var(--bad)} .dc .imp small{font-weight:400;color:var(--muted);font-size:12px;display:block}
+  .dc .btn{margin-top:auto;justify-content:center}
+  .lv{align-self:flex-start;font-size:11px;font-weight:700;letter-spacing:.04em;padding:3px 8px;border-radius:6px}
+  .lv.cao{background:var(--bad-50);color:var(--bad)} .lv.tb{background:var(--warn-50);color:var(--warn)}
+  /* màn chi tiết */
+  .mbg{position:fixed;inset:0;background:rgba(17,24,39,.45);z-index:30;display:none}
+  .mdl{position:fixed;inset:20px;max-width:1240px;margin:0 auto;background:#fff;border-radius:14px;z-index:31;display:none;flex-direction:column;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.2)}
+  .mdl.on,.mbg.on{display:flex}
+  .mdl-h{display:flex;align-items:center;gap:10px;padding:14px 20px;border-bottom:1px solid var(--line)} .mdl-h h3{margin:0;font-size:16px}
+  .mdl-m{display:grid;grid-template-columns:270px 1fr;flex:1;min-height:0}
+  .sl{border-right:1px solid var(--line);overflow:auto;background:#FAFAFB}
+  .sl button{display:flex;flex-direction:column;gap:4px;align-items:flex-start;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);background:none;padding:12px 16px;font-size:14px;line-height:1.4}
+  .sl button.on{background:#fff;box-shadow:inset 3px 0 0 var(--primary)} .sl button>span:last-child{font-size:12px;color:var(--bad);font-weight:600}
+  .det{overflow:auto;padding:20px 24px;display:flex;flex-direction:column;gap:16px}
+  .det h2{margin:6px 0 4px;font-size:20px;line-height:1.35}
+  .impbox{display:flex;gap:16px;flex-wrap:wrap;align-items:center;background:var(--bad-50);border-radius:10px;padding:12px 16px}
+  .impbox .v{font-size:22px;font-weight:700;color:var(--bad)}
+  .h5{font-size:16px;font-weight:700;margin:6px 0 0}
+  .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+  .st{border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:6px;font-size:14px;line-height:1.45}
+  .st .n{font-size:11px;font-weight:700;color:var(--primary);letter-spacing:.05em}
+  .st p{margin:0;color:var(--muted);font-size:13px}
+  .ob{display:inline-block;font-size:12px;background:var(--primary-50);color:var(--primary);border-radius:6px;padding:2px 7px;margin:2px 4px 0 0;font-weight:600}
+  .root{border:2px solid #EF4444;background:#FFF7F7;border-radius:10px;padding:12px 16px;font-size:15px;line-height:1.55}
+  .root .sec{color:var(--bad);margin-bottom:4px}
+  .lin{font-size:13px;color:var(--muted);line-height:1.8}
+  .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+  .op{border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px;position:relative}
+  .op.rec{border:2px solid var(--ok);background:#FBFEFC}
+  .op h4{margin:0;font-size:15px;line-height:1.4} .op p{margin:0;font-size:13px;color:var(--muted);line-height:1.5}
+  .op .rows .r{font-size:13px;padding:6px 0;gap:10px} .op .rows .r b{text-align:right}
+  .op .btn{justify-content:center;margin-top:auto}
+  .rtag{position:absolute;top:-11px;right:12px;background:var(--ok);color:#fff;font-size:11px;font-weight:700;padding:3px 9px;border-radius:10px}
+  @media (max-width:900px){.mdl{inset:0;border-radius:0}.mdl-m{grid-template-columns:1fr;grid-template-rows:auto 1fr}.sl{display:flex;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line)}.sl button{min-width:210px;border-bottom:0;border-right:1px solid var(--line)}.sl button.on{box-shadow:inset 0 -3px 0 var(--primary)}.det{padding:16px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="app-head">
+    <div class="app-title">
+      <span class="app-icon" style="background:#E8F7EE">📈</span>
+      <div><h1>Theo dõi vận hành toàn nhà máy</h1><p>Công ty May Demo · cập nhật 07:15 hôm nay, 06/11/2026</p></div>
+      <div class="actions"><select class="field"><option>Toàn nhà máy</option><option>Xưởng 1 (Chuyền 01–08)</option><option>Xưởng 2 (Chuyền 09–15)</option></select><button class="btn">⬇ Báo cáo tuần</button></div>
+    </div>
+    <nav class="tabs">
+      <button class="tab on" data-v="tq">Tổng quan</button>
+      <button class="tab" data-v="dh">Đơn hàng</button>
+      <button class="tab" data-v="sx">Sản xuất</button>
+      <button class="tab" data-v="kho">Kho</button>
+      <button class="tab" data-v="cl">Chất lượng</button>
+      <button class="tab" data-v="ns">Nhân sự</button>
+    </nav>
+  </header>
+
+  <div class="app-body">
+    <!-- ============ TỔNG QUAN ============ -->
+    <section class="view on" id="tq">
+      <div class="grid2">
+        <div class="card ai">
+          <div class="card-h"><h3>✨ Mozy AI nhận định hôm nay</h3><span class="r muted" style="font-size:12px">Tổng hợp lúc 07:15 từ 6 nguồn dữ liệu</span></div>
+          <div id="ins"></div>
+        </div>
+        <div class="card">
+          <div class="card-h"><h3>💬 Hỏi nhanh</h3></div>
+          <div class="card-b" style="display:flex;flex-direction:column;gap:10px">
+            <div class="ask-box"><input class="field" id="q" placeholder="Gõ câu hỏi bằng lời thường…" onkeydown="if(event.key==='Enter')ask(this.value)"><button class="btn primary" onclick="ask(q.value)">Hỏi</button></div>
+            <div class="chips" id="chips"></div>
+            <div class="answer" id="ans"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="kpis">
+        <div class="kpi"><div class="l">Đơn đúng tiến độ</div><div class="v num">17/22</div><div class="s warn">5 đơn có nguy cơ trễ</div></div>
+        <div class="kpi"><div class="l">Sản lượng hôm qua</div><div class="v num">15.940</div><div class="s bad">▼ 4% so với kế hoạch 16.600</div></div>
+        <div class="kpi"><div class="l">Hiệu suất chuyền</div><div class="v num">74,8%</div><div class="s bad">▼ 1,6 điểm so với tuần trước</div></div>
+        <div class="kpi"><div class="l">Tỷ lệ lỗi</div><div class="v num">2,7%</div><div class="s muted">Mục tiêu dưới 3%</div></div>
+        <div class="kpi"><div class="l">Lao động đi làm</div><div class="v num">922/980</div><div class="s muted">94,1% · 46 nghỉ phép</div></div>
+        <div class="kpi"><div class="l">Nguyên phụ liệu sắp thiếu</div><div class="v num bad">7</div><div class="s muted">Dưới 5 ngày sản xuất</div></div>
+      </div>
+
+
+      <div class="card">
+        <div class="card-h"><h3>Quyết định cần chú ý hôm nay</h3><span class="r muted" style="font-size:12px">Mỗi thẻ được suy ra từ chuỗi liên kết dữ liệu, không phải cảnh báo rời rạc</span></div>
+        <div class="dec" id="dec"></div>
+      </div>
+
+      <div class="charts">
+        <div class="card wide">
+          <div class="card-h"><h3>Sản lượng 14 ngày: thực tế và kế hoạch</h3><div class="r leg"><span><i style="background:var(--primary)"></i>Thực tế</span><span><i style="background:#9CA3AF"></i>Kế hoạch</span><span><i class="sq" style="background:#EF4444;border-radius:5px"></i>Thấp hơn kế hoạch &gt;4%</span></div></div>
+          <div class="card-b"><svg id="line" viewBox="0 0 800 220" style="width:100%;height:auto;display:block"></svg></div>
+        </div>
+        <div class="card" data-ch="eff"></div>
+        <div class="card" data-ch="ot"></div>
+        <div class="card" data-ch="def"></div>
+        <div class="card" data-ch="par"></div>
+        <div class="card" data-ch="ord"></div>
+        <div class="stack"><div class="card" data-ch="cus"></div><div class="card" data-ch="npl"></div></div>
+        <div class="card" data-ch="hr"></div>
+        <div class="card" data-ch="rev"></div>
+      </div>
+      <div class="note">ⓘ Số liệu lấy từ ERP đơn hàng, phần mềm kho, file Excel kế hoạch, máy chấm công và hệ thống đếm hàng trên 15 chuyền.</div>
+    </section>
+
+    <!-- ============ ĐƠN HÀNG ============ -->
+    <section class="view" id="dh">
+      <div class="card"><div class="card-h"><h3>Tiến độ đơn hàng đang chạy</h3><span class="r muted">22 đơn · hiện 8 đơn cần chú ý và sắp giao</span></div>
+        <div class="tbl-wrap"><table class="t">
+          <thead><tr><th>Đơn</th><th>Khách hàng</th><th>Mã hàng</th><th class="right">Số lượng</th><th>Đã xong</th><th>Ngày giao</th><th>Tình trạng</th></tr></thead>
+          <tbody id="orders"></tbody>
+        </table></div>
+      </div>
+    </section>
+
+    <!-- ============ SẢN XUẤT ============ -->
+    <section class="view" id="sx">
+      <div class="kpis">
+        <div class="kpi"><div class="l">Chuyền đang chạy</div><div class="v num">15/15</div></div>
+        <div class="kpi"><div class="l">Chuyền chậm hơn kế hoạch</div><div class="v num warn">4</div></div>
+        <div class="kpi"><div class="l">Giờ tăng ca tuần này</div><div class="v num">5.400</div><div class="s muted">▲ 12% so với tuần trước</div></div>
+      </div>
+      <div class="grid2e"><div class="card" data-ch="eff"></div><div class="card" data-ch="ot"></div></div>
+      <div class="card"><div class="card-h"><h3>Sản lượng theo chuyền hôm qua</h3><span class="r muted">Các chuyền cần chú ý</span></div>
+        <div class="tbl-wrap"><table class="t">
+          <thead><tr><th>Chuyền</th><th>Mã hàng</th><th class="right">Kế hoạch</th><th class="right">Thực tế</th><th>Đạt</th><th>Ghi chú</th></tr></thead>
+          <tbody id="lines"></tbody>
+        </table></div>
+      </div>
+    </section>
+
+    <!-- ============ KHO ============ -->
+    <section class="view" id="kho">
+      <div class="card"><div class="card-h"><h3>Nguyên phụ liệu cần theo dõi</h3><span class="r badge b-bad">7 loại sắp thiếu</span></div>
+        <div class="tbl-wrap"><table class="t">
+          <thead><tr><th>Nguyên phụ liệu</th><th>Dùng cho đơn</th><th class="right">Tồn kho</th><th class="right">Đủ dùng</th><th>Hàng về</th><th>Mức</th></tr></thead>
+          <tbody>
+            <tr><td>Vải pique navy · lô V-2611</td><td>PO-2611, 2614, 2620</td><td class="right num">2.400 m</td><td class="right">1 ngày</td><td>Trễ, dự kiến 10/11</td><td><span class="badge b-bad">Sắp hết</span></td></tr>
+            <tr><td>Khóa kéo 18 cm đen</td><td>PO-2615</td><td class="right num">6.400 cái</td><td class="right">3 ngày</td><td>Chưa đặt đủ</td><td><span class="badge b-bad">Sắp hết</span></td></tr>
+            <tr><td>Chỉ may 40/2 trắng</td><td>Nhiều đơn</td><td class="right num">420 cuộn</td><td class="right">4 ngày</td><td>08/11</td><td><span class="badge b-bad">Sắp hết</span></td></tr>
+            <tr><td>Mex cổ áo</td><td>PO-2623</td><td class="right num">6.000 m</td><td class="right">4 ngày</td><td>10/11</td><td><span class="badge b-bad">Sắp hết</span></td></tr>
+            <tr><td>Kaki cotton be</td><td>PO-2604</td><td class="right num">38.000 m</td><td class="right">12 ngày</td><td>—</td><td><span class="badge b-ok">Đủ</span></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+      <div class="card" data-ch="npl"></div>
+    </section>
+
+    <!-- ============ CHẤT LƯỢNG ============ -->
+    <section class="view" id="cl">
+      <div class="grid2e"><div class="card" data-ch="def"></div><div class="card" data-ch="par"></div></div>
+      <div class="grid2e">
+        <div class="card"><div class="card-h"><h3>Lỗi hay gặp tuần này</h3><span class="r muted">Toàn nhà máy</span></div>
+          <div class="list">
+            <div class="li"><div style="flex:1">Đường may không đều</div><div class="bar bad" style="flex:1"><i style="width:82%"></i></div><b class="num">552</b></div>
+            <div class="li"><div style="flex:1">Lệch cổ</div><div class="bar warn" style="flex:1"><i style="width:55%"></i></div><b class="num">370</b></div>
+            <div class="li"><div style="flex:1">Bẩn, dính dầu</div><div class="bar warn" style="flex:1"><i style="width:38%"></i></div><b class="num">255</b></div>
+            <div class="li"><div style="flex:1">Sai thông số</div><div class="bar" style="flex:1"><i style="width:21%"></i></div><b class="num">140</b></div>
+          </div>
+        </div>
+        <div class="card"><div class="card-h"><h3>Kiểm hàng của khách</h3></div>
+          <div class="list">
+            <div class="li"><span class="badge b-ok">Đạt</span><div style="flex:1">PO-2604 · Nordvik Outdoor (Thụy Điển)</div><span class="muted">03/11</span></div>
+            <div class="li"><span class="badge b-bad">Không đạt</span><div style="flex:1">PO-2602 · Coral Bay Clothing (Úc) · kiểm lại 08/11</div><span class="muted">04/11</span></div>
+            <div class="li"><span class="badge b-info">Sắp kiểm</span><div style="flex:1">PO-2609 · Kazeyama Sports (Nhật)</div><span class="muted">12/11</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ NHÂN SỰ ============ -->
+    <section class="view" id="ns">
+      <div class="kpis">
+        <div class="kpi"><div class="l">Tổng lao động</div><div class="v num">980</div><div class="s muted">890 trực tiếp · 90 gián tiếp</div></div>
+        <div class="kpi"><div class="l">Vắng không phép hôm nay</div><div class="v num warn">12</div></div>
+        <div class="kpi"><div class="l">Nghỉ việc tháng 10</div><div class="v num bad">58</div><div class="s muted">5,9% · tháng 9: 44 người</div></div>
+        <div class="kpi"><div class="l">Đang tuyển</div><div class="v num">50</div><div class="s muted">Thợ may 40 · Cắt 6 · Hoàn thiện 4</div></div>
+      </div>
+      <div class="card"><div class="card-h"><h3>Đi làm theo bộ phận hôm nay</h3></div>
+        <div class="card-b" id="att"></div>
+      </div>
+      <div class="grid2e"><div class="card" data-ch="att"></div><div class="card" data-ch="hr"></div></div>
+    </section>
+  </div>
+</div>
+
+<!-- ============ MÀN CHI TIẾT QUYẾT ĐỊNH ============ -->
+<div class="mbg" id="mbg" onclick="closeM()"></div>
+<div class="mdl" id="mdl" role="dialog" aria-modal="true" aria-labelledby="m-t">
+  <div class="mdl-h"><h3>Quyết định cần chú ý · 06/11/2026</h3><button class="x" onclick="closeM()" aria-label="Đóng">×</button></div>
+  <div class="mdl-m"><nav class="sl" id="sl"></nav><div class="det" id="det"></div></div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const f = n => n.toLocaleString("vi-VN");
+const LV = {cao:"RỦI RO CAO", tb:"RỦI RO TRUNG BÌNH"};
+
+// 5 tình huống: mỗi cái là một chuỗi liên kết dữ liệu → nguyên nhân gốc → 3 phương án
+const SC = [
+ {lv:"cao", t:"3 đơn xuất Mỹ có nguy cơ trễ 4–6 ngày vì vải lô V-2611 về trễ", c:"Nhà cung cấp dời ngày giao 18.000 m vải pique từ 03/11 sang 10/11.", m:"~1,1 tỷ đồng", n:"3 đơn",
+  orders:[["PO-2611","Bellmont Apparel (Mỹ)","AO-POLO-2611",14000,"15/11","trễ 5 ngày"],["PO-2614","Bellmont Apparel (Mỹ)","AO-POLO-2611",10000,"18/11","trễ 4 ngày"],["PO-2620","Bellmont Apparel (Mỹ)","AO-THUN-2402",8000,"20/11","trễ 6 ngày"]],
+  steps:[["Vải về trễ 7 ngày","Phiếu mua PM-0418: 18.000 m pique navy, NCC xác nhận dời sang 10/11.",["Lô V-2611","PM-0418","NCC Dệt Phú An"]],
+         ["Xưởng cắt dừng 3 bàn","Kế hoạch cắt 8.400 sp tuần này mới đạt 38%.",["Bàn 03","Bàn 04","Bàn 07"]],
+         ["3 chuyền sắp hết hàng","Tồn bán thành phẩm chỉ đủ đến trưa 08/11.",["Chuyền 05","Chuyền 06","Chuyền 09"]],
+         ["3 đơn trễ ngày xuất","Phạt chậm giao 3%/ngày + nguy cơ phải đi máy bay.",["PO-2611","PO-2614","PO-2620"]]],
+  root:"Kế hoạch cắt vẫn chạy theo <b>ngày vải về cũ (03/11)</b>. Khi nhà cung cấp đổi ngày qua email, không ai cập nhật vào Excel kế hoạch nên 4 ngày sau mới phát hiện.",
+  src:["ERP đơn hàng (cập nhật 06:00)","Phần mềm kho – phiếu nhập NPL","Email xác nhận NCC 02/11","Excel kế hoạch cắt","Đếm hàng chuyền 05, 06, 09"],
+  opts:[{k:"A",t:"Giữ nguyên, xuất phần trễ bằng máy bay",d:"Chờ vải 10/11, tăng ca cắt 2 ca, phần hàng trễ đi đường hàng không.",save:"3/3 đơn",hit:"Không",cost:"~640 triệu đồng",res:"Giao đúng hẹn nhưng cước hàng không rất cao"},
+        {k:"B",rec:1,t:"Mua vải thay thế trong nước cho 2 đơn",d:"NCC nội địa giao 8.500 m ngày 08/11 (giá cao hơn 18%). Bellmont Apparel đã duyệt chất vải tương đương năm ngoái.",save:"2/3 đơn",hit:"PO-2620 trễ 3 ngày",cost:"~240 triệu đồng",res:"Giảm 78% thiệt hại, cần khách duyệt mẫu trong 24 giờ"},
+        {k:"C",t:"Xin khách dời ngày giao, đổi lịch chuyền",d:"Đàm phán với Bellmont Apparel dời 6 ngày, chiết khấu 2%. Chuyền 05, 06, 09 chạy đơn khác trong lúc chờ.",save:"0/3 đơn (dời hẹn)",hit:"3 đơn đổi lịch",cost:"~350 triệu đồng",res:"Không phạt, nhưng ảnh hưởng uy tín với khách lớn"}]},
+ {lv:"cao", t:"Xưởng 2 hiệu suất giảm 3 ngày liên tiếp do thiếu 21 người", c:"Tháng 10 có 58 người nghỉ việc, 21 người ở 3 chuyền Xưởng 2.", m:"~560 triệu đồng", n:"2 đơn",
+  orders:[["PO-2617","Hanbit Urban (Hàn Quốc)","AO-KHOAC-1150",9000,"19/11","trễ 3 ngày"],["PO-2623","Nordvik Outdoor (Thụy Điển)","SOMI-NU-1210",15000,"22/11","trễ 2 ngày"]],
+  steps:[["21 công nhân nghỉ việc","Máy chấm công: 21 người Xưởng 2 nghỉ hẳn trong tháng 10, gấp đôi Xưởng 1.",["Xưởng 2","Tháng 10"]],
+         ["3 chuyền thiếu 6–8 người","Mỗi chuyền chỉ còn 37–40/46 người.",["Chuyền 10","Chuyền 13","Chuyền 15"]],
+         ["Hiệu suất 74% → 63%","Giảm 3 ngày liên tiếp, thiếu ~900 sp/ngày.",["Đếm hàng chuyền","04–06/11"]],
+         ["2 đơn chậm 2–3 ngày","Nếu không bù người, ngày giao trễ.",["PO-2617","PO-2623"]]],
+  root:"Đơn giá công đoạn mã <b>AO-KHOAC-1150</b> thấp hơn mã khác 12%, thu nhập thợ Xưởng 2 giảm ~900.000 đồng/tháng → thợ tay nghề cao nghỉ sang xưởng gần nhà.",
+  src:["Máy chấm công (đến 07:00)","Hồ sơ nghỉ việc – phòng nhân sự","Bảng đơn giá công đoạn","Đếm hàng chuyền","ERP đơn hàng (cập nhật 06:00)"],
+  opts:[{k:"A",rec:1,t:"Điều 14 thợ từ Xưởng 1 trong 2 tuần",d:"Chuyền 02 và 07 đang dư người (đơn sắp xong). Trả phụ cấp điều chuyển 30.000 đồng/ngày.",save:"2/2 đơn",hit:"Xưởng 1 giảm ~2% sản lượng",cost:"~55 triệu đồng",res:"Cứu ngay trong tuần; nên làm kèm điều chỉnh đơn giá"},
+        {k:"B",t:"Tăng đơn giá 12% + thưởng giữ chân",d:"Điều chỉnh đơn giá mã áo khoác, thưởng 500.000 đồng cho người ở lại hết quý.",save:"1/2 đơn",hit:"PO-2617 vẫn trễ 2 ngày",cost:"~85 triệu đồng/tháng",res:"Giảm nghỉ việc dài hạn, tác dụng chậm 3–4 tuần"},
+        {k:"C",t:"Đưa 3.500 sp ra gia công ngoài",d:"Thuê xưởng vệ tinh may phần thân áo khoác, nhà máy làm hoàn thiện.",save:"2/2 đơn",hit:"Không",cost:"~180 triệu đồng",res:"Rủi ro chất lượng, cần QA giám sát tại chỗ"}]},
+ {lv:"tb", t:"Chuyền 12 tỷ lệ lỗi tăng lên 5,8%, đơn Nhật sắp kiểm hàng", c:"2 máy 2 kim quá hạn bảo trì + 3 thợ mới ở công đoạn tra cạp.", m:"~250 triệu đồng", n:"1 đơn",
+  orders:[["PO-2609","Kazeyama Sports (Nhật)","QUAN-KAKI-0932",16000,"16/11","kiểm hàng 12/11"]],
+  steps:[["2 máy quá hạn bảo trì","Quá 18 ngày so với lịch, kim lệch, đường may bỏ mũi.",["Máy M-12-07","Máy M-12-09"]],
+         ["3 thợ mới ở tra cạp","Vào làm 28/10, chưa qua bài kiểm tay nghề.",["Chuyền 12","Công đoạn tra cạp"]],
+         ["Lỗi đường may tăng gấp 3","156 sp phải sửa trong 3 ngày.",["Phiếu QC 03–05/11"]],
+         ["Nguy cơ rớt kiểm hàng","AQL 2.5 của Kazeyama Sports, kiểm 12/11.",["PO-2609"]]],
+  root:"Lịch bảo trì máy bị <b>hoãn 2 lần</b> để chạy đơn gấp, đúng lúc chuyền nhận thợ mới → cả máy và người cùng yếu ở một công đoạn.",
+  src:["Phiếu kiểm hàng QC","Sổ bảo trì máy (Excel)","Hồ sơ nhân sự","Đếm hàng chuyền 12"],
+  opts:[{k:"A",rec:1,t:"Dừng chuyền 4 giờ, bảo trì máy + kèm thợ",d:"Bảo trì 2 máy chiều nay, tổ trưởng kèm 3 thợ mới, kiểm 100% tra cạp đến hết tuần.",save:"1/1 đơn",hit:"Mất ~450 sp hôm nay",cost:"~15 triệu đồng",res:"Lỗi dự kiến về dưới 3% từ 09/11"},
+        {k:"B",t:"Chỉ tăng QC kiểm 100% cuối chuyền",d:"Không dừng chuyền, thêm 2 QC bắt lỗi và sửa hàng.",save:"1/1 đơn (khả năng ~70%)",hit:"Không",cost:"~20 triệu đồng",res:"Lỗi vẫn phát sinh, chỉ chặn ở cuối"},
+        {k:"C",t:"Chuyển tra cạp sang Chuyền 14",d:"Chuyền 14 thợ lành nghề làm hộ công đoạn tra cạp 1 tuần.",save:"1/1 đơn",hit:"PO-2625 chậm 1 ngày",cost:"~8 triệu đồng",res:"Nhanh, nhưng đẩy rủi ro sang đơn khác"}]},
+ {lv:"tb", t:"Thiếu 17.600 khóa kéo cho lệnh sản xuất áo khoác", c:"Khách đổi mẫu thêm túi ngực nhưng định mức trong ERP chưa cập nhật.", m:"~380 triệu đồng", n:"1 đơn",
+  orders:[["PO-2615","Northline Wear (Canada)","AO-KHOAC-1150",12000,"25/11","dừng chuyền từ 11/11"]],
+  steps:[["Khách đổi mẫu 20/10","Thêm túi ngực có khóa: 1 → 2 khóa/sp.",["AO-KHOAC-1150","Mẫu rev.2"]],
+         ["Định mức chưa cập nhật","Phòng kỹ thuật sửa rập nhưng bảng định mức trong ERP vẫn 1 khóa/sp.",["Định mức v1","LSX-1150-03","LSX-1150-04"]],
+         ["Kho thiếu 17.600 cái","Tồn 6.400, cần 24.000 cho 2 lệnh.",["Khóa kéo 18 cm đen"]],
+         ["2 chuyền dừng từ 11/11","Đơn giao 25/11 trễ ~5 ngày.",["Chuyền 07","Chuyền 08","PO-2615"]]],
+  root:"Thay đổi mẫu chỉ được <b>gửi qua Zalo cho phòng kỹ thuật</b>, không đi qua bước cập nhật định mức → phòng mua hàng đặt theo số cũ.",
+  src:["ERP đơn hàng (cập nhật 06:00)","Bảng định mức NPL","Phần mềm kho","Excel kế hoạch sản xuất"],
+  opts:[{k:"A",rec:1,t:"Đặt gấp nhà cung cấp hiện tại",d:"NCC giao 10/11 nếu chịu phí gấp 15%.",save:"1/1 đơn",hit:"Không",cost:"~28 triệu đồng",res:"Chuyền chạy liên tục, an toàn nhất"},
+        {k:"B",t:"Mượn khóa của đơn PO-2622",d:"Dùng tồn khóa cùng loại của đơn Coral Bay Clothing, hoàn trả khi hàng về.",save:"1/1 đơn",hit:"PO-2622 có thể chậm 2 ngày",cost:"Gần như 0",res:"Rẻ, nhưng chuyển rủi ro sang đơn khác"},
+        {k:"C",t:"May thân trước, ráp khóa sau",d:"Chạy các công đoạn không cần khóa, ráp túi ngực khi khóa về.",save:"1/1 đơn (trễ 1–2 ngày)",hit:"Không",cost:"~35 triệu đồng",res:"Tốn công lắp lại, dễ sai sót"}]},
+ {lv:"tb", t:"86 công nhân Xưởng 1 sắp vượt giới hạn tăng ca 300 giờ/năm", c:"Kế hoạch tháng 11 thêm 38 giờ/người, vượt mức luật cho phép.", m:"~480 triệu đồng", n:"2 đơn",
+  orders:[["PO-2624","Nordvik Outdoor (Thụy Điển)","AO-POLO-2611",24000,"28/11","đánh giá tuân thủ 20/11"],["PO-2627","Nordvik Outdoor (Thụy Điển)","VAY-XOE-1105",10000,"05/12","đánh giá tuân thủ 20/11"]],
+  steps:[["Tăng ca tuần này 5.400 giờ","Tăng 12% so với tuần trước để bù sản lượng.",["Xưởng 1","Bảng tăng ca"]],
+         ["86 người đã 268–296 giờ","Cộng dồn từ đầu năm theo máy chấm công.",["Chuyền 01","Chuyền 03","Chuyền 04","Chuyền 06"]],
+         ["Kế hoạch tháng 11 vượt luật","Thêm 38 giờ/người → 306–334 giờ, trên mức 300 giờ/năm.",["Excel kế hoạch tăng ca"]],
+         ["Khách EU đánh giá 20/11","Vi phạm giờ làm là lỗi nặng, có thể tạm dừng đặt hàng.",["PO-2624","PO-2627"]]],
+  root:"Tăng ca được duyệt <b>theo từng chuyền, từng tuần</b>; không ai cộng dồn giờ của từng người trong cả năm.",
+  src:["Máy chấm công (cộng dồn 01/01–05/11)","Excel kế hoạch tăng ca","Lịch đánh giá của khách hàng","Bộ luật Lao động 2019 – Điều 107"],
+  opts:[{k:"A",t:"Tuyển 24 lao động thời vụ",d:"Tuyển qua công ty cung ứng trong 2 tuần, thay phần tăng ca vượt.",save:"2/2 đơn",hit:"Không",cost:"~210 triệu đồng",res:"Đúng luật, nhưng năng suất người mới thấp"},
+        {k:"B",rec:1,t:"Chuyển bớt việc sang Chuyền 11 + chia ca",d:"Chuyển 1 mã hàng sang Chuyền 11 Xưởng 2 (giờ tăng ca còn thấp), làm thứ Bảy luân phiên ở Xưởng 1.",save:"2/2 đơn",hit:"Chuyền 11 hiệu suất −2 điểm",cost:"~36 triệu đồng",res:"Đúng luật, không ai vượt 300 giờ"},
+        {k:"C",t:"Chỉ tăng ca người dưới 250 giờ",d:"Giữ kế hoạch nhưng loại 86 người khỏi danh sách tăng ca.",save:"1/2 đơn",hit:"PO-2624 chậm 2 ngày",cost:"Gần như 0",res:"Đúng luật, chấp nhận chậm 1 đơn"}]},
+];
+const INS = [
+  [0,"cao","Vải lô <b>V-2611</b> về trễ 7 ngày sẽ làm <b>3 đơn xuất Mỹ</b> trễ 4–6 ngày, thiệt hại ước ~1,1 tỷ đồng."],
+  [1,"cao","Xưởng 2 hiệu suất giảm <b>3 ngày liên tiếp</b> (74% → 63%) do thiếu 21 người nghỉ việc."],
+  [4,"tb","<b>86 công nhân</b> Xưởng 1 sẽ vượt 300 giờ tăng ca/năm nếu giữ kế hoạch tháng 11 — trước đợt đánh giá của khách EU."],
+  [2,"tb","Chuyền 12 lỗi <b>5,8%</b>, gấp đôi mức cho phép, đúng 6 ngày trước khi Kazeyama Sports (Nhật) kiểm hàng."],
+  [3,"tb","Thiếu <b>17.600 khóa kéo</b> cho áo khoác PO-2615 vì định mức chưa cập nhật theo mẫu mới."],
+];
+$("ins").innerHTML = INS.map(i=>`<div class="ins"><span class="sv ${i[1]}" title="${LV[i[1]]}"></span><div>${i[2]}</div><a href="#" onclick="openM(${i[0]});return false">Xem →</a></div>`).join("");
+$("dec").innerHTML = SC.map((s,i)=>`<div class="dc ${s.lv}"><span class="lv ${s.lv}">${LV[s.lv]}</span><h4>${s.t}</h4><p>${s.c}</p><div class="imp"><small>Ảnh hưởng ước tính</small>${s.m} (${s.n})</div><button class="btn" onclick="openM(${i})">Xem chi tiết &amp; phương án</button></div>`).join("");
+
+let cur = 0;
+function openM(i){
+  cur = i; const s = SC[i];
+  $("sl").innerHTML = SC.map((x,k)=>`<button class="${k===i?"on":""}" onclick="openM(${k})"><span class="lv ${x.lv}">${LV[x.lv]}</span>${x.t}<span>${x.m}</span></button>`).join("");
+  $("det").innerHTML = `
+    <div><span class="lv ${s.lv}">${LV[s.lv]}</span><h2 id="m-t">${s.t}</h2><div class="muted">${s.c}</div></div>
+    <div class="impbox"><div><div class="muted" style="font-size:12px">Ảnh hưởng ước tính</div><div class="v">${s.m}</div></div><div class="muted">${s.n} bị ảnh hưởng</div></div>
+    <div class="tbl-wrap"><table class="t"><thead><tr><th>Đơn</th><th>Khách hàng</th><th>Mã hàng</th><th class="right">Số lượng</th><th>Ngày giao</th><th>Tác động</th></tr></thead>
+      <tbody>${s.orders.map(o=>`<tr><td><b>${o[0]}</b></td><td>${o[1]}</td><td>${o[2]}</td><td class="right num">${f(o[3])}</td><td>${o[4]}</td><td><span class="badge b-bad">${o[5]}</span></td></tr>`).join("")}</tbody></table></div>
+    <div class="h5">Vì sao? — chuỗi liên kết dữ liệu</div>
+    <div class="steps">${s.steps.map((x,k)=>`<div class="st"><span class="n">BƯỚC ${k+1}</span><b>${x[0]}</b><p>${x[1]}</p><div>${x[2].map(c=>`<span class="ob">${c}</span>`).join("")}</div></div>`).join("")}</div>
+    <div class="root"><div class="sec">Nguyên nhân gốc</div>${s.root}</div>
+    <div class="lin"><b>Dữ liệu dùng để kết luận:</b> ${s.src.join(" · ")}</div>
+    <div class="h5">Phải làm gì? — Phương án &amp; đánh đổi</div>
+    <div class="note" style="font-size:13px">ⓘ Hệ thống chỉ gợi ý dựa trên dữ liệu. Ban lãnh đạo là người quyết định.</div>
+    <div class="opts">${s.opts.map(o=>`<div class="op${o.rec?" rec":""}">${o.rec?'<span class="rtag">Đề xuất</span>':""}<h4>Phương án ${o.k}: ${o.t}</h4><p>${o.d}</p>
+      <div class="rows"><div class="r"><span>Đơn cứu được</span><b class="ok">${o.save}</b></div><div class="r"><span>Đơn bị ảnh hưởng</span><b class="warn">${o.hit}</b></div><div class="r"><span>Chi phí</span><b>${o.cost}</b></div><div class="r"><span>Kết quả</span><b style="font-weight:600">${o.res}</b></div></div>
+      <button class="btn ${o.rec?"primary":""}" onclick="approve(this,'${o.k}')">Duyệt phương án ${o.k}</button></div>`).join("")}</div>`;
+  $("det").scrollTop = 0;
+  $("mdl").classList.add("on"); $("mbg").classList.add("on");
+}
+function approve(b,k){
+  b.closest(".opts").querySelectorAll(".btn").forEach(x=>x.disabled=true);
+  b.textContent = "✓ Đã duyệt phương án " + k + " · đã giao việc"; b.className = "btn"; b.style.cssText = "background:var(--ok-50);color:var(--ok);border-color:var(--ok)";
+}
+function closeM(){ $("mdl").classList.remove("on"); $("mbg").classList.remove("on"); }
+document.addEventListener("keydown", e => { if(e.key==="Escape") closeM(); });
+
+// Biểu đồ 14 ngày (SVG)
+const ACT = [16100,16600,15900,16800,16950,16700,16300,16650,16850,16200,16400,16150,15700,15940];
+const PLAN = [16400,16400,16400,16400,16400,16400,16400,16600,16600,16600,16600,16600,16600,16600];
+(()=>{
+  const W=800,H=220,L=52,B=26,T=10, min=14000,max=18500;
+  const x = i => L + i*(W-L-10)/13, y = v => T + (H-T-B)*(1-(v-min)/(max-min));
+  let s = "";
+  for(let v=min; v<=max; v+=1500) s += `<line x1="${L}" x2="${W-10}" y1="${y(v)}" y2="${y(v)}" stroke="#E5E7EB"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end">${f(v)}</text>`;
+  ACT.forEach((_,i)=>{ if(i%2===1) s += `<text x="${x(i)}" y="${H-6}" text-anchor="middle">${String(i+23-(i>8?31:0)).padStart(2,"0")}/${i>8?"11":"10"}</text>`; });
+  const pts = a => a.map((v,i)=>x(i)+","+y(v)).join(" ");
+  s += `<polyline points="${pts(PLAN)}" fill="none" stroke="#9CA3AF" stroke-width="2" stroke-dasharray="5 4"/>`;
+  s += `<polyline points="${pts(ACT)}" fill="none" stroke="var(--primary)" stroke-width="2.5"/>`;
+  s += ACT.map((v,i)=>`<circle cx="${x(i)}" cy="${y(v)}" r="3.5" fill="${v<PLAN[i]*0.96?"#EF4444":"var(--primary)"}"><title>${f(v)} / kế hoạch ${f(PLAN[i])}</title></circle>`).join("");
+  $("line").innerHTML = s;
+})();
+
+const hbar = (rows, cls, fmt, scale) => rows.map(r=>`<div class="hb"><span>${r[0]}</span><div class="bar ${cls(r[1])}"><i style="width:${r[1]*scale}%"></i></div><b class="num right">${fmt(r[1])}</b></div>`).join("");
+
+// ---- Biểu đồ SVG dùng chung (không thư viện) ----
+const C = {p:"#0B6FE0", ok:"#16A34A", warn:"#F59E0B", bad:"#EF4444", g:"#9CA3AF", grid:"#E5E7EB", ink:"#374151"};
+const d1 = v => v.toLocaleString("vi-VN",{maximumFractionDigits:1});
+const pad = n => String(n).padStart(2,"0");
+const dl = d => d<=8 ? `${23+d}/10` : `${pad(d-8)}/11`; // 14 ngày: 23/10 → 05/11
+const svg = (id,W,H,s) => $(id).innerHTML = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block">${s}</svg>`;
+const yAxis = (W,L,R,y,max,step,fmt,min=0) => { let s=""; for(let v=min; v<=max+1e-9; v+=step) s+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="${C.grid}"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end">${fmt(v)}</text>`; return s; };
+const refY = (W,L,R,yv,t) => `<line x1="${L}" x2="${W-R}" y1="${yv}" y2="${yv}" stroke="${C.ink}" stroke-width="1.5" stroke-dasharray="5 4"/><text x="${W-R}" y="${yv-5}" text-anchor="end" class="k">${t}</text>`;
+const sq = (c,t) => `<span><i class="sq" style="background:${c}"></i>${t}</span>`;
+const ds = t => `<span><i class="ds"></i>${t}</span>`;
+const pct = v => v+"%";
+
+// Thanh ngang: rows = [nhãn, giá trị, màu, tooltip]
+function hBars(id, rows, o){
+  const W=520, L=o.L||86, R=48, rh=o.rh||24, T=26, H=T+rows.length*rh+24, x=v=>L+(W-L-R)*Math.min(v,o.max)/o.max;
+  let s="";
+  for(let v=0; v<=o.max; v+=o.step) s+=`<line x1="${x(v)}" x2="${x(v)}" y1="${T}" y2="${H-22}" stroke="${C.grid}"/><text x="${x(v)}" y="${H-6}" text-anchor="middle">${o.fmt(v)}</text>`;
+  rows.forEach((r,i)=>{ const y=T+i*rh;
+    s+=`<g><title>${r[3]||r[0]+": "+o.fmt(r[1])}</title>${o.track?`<rect x="${L}" y="${y+5}" width="${W-L-R}" height="${rh-10}" rx="3" fill="#F3F4F6"/>`:""}<text x="${L-8}" y="${y+rh/2+4}" text-anchor="end" class="k">${r[0]}</text><rect x="${L}" y="${y+5}" width="${Math.max(x(r[1])-L,2)}" height="${rh-10}" rx="3" fill="${r[2]}"/><text x="${(o.track?W-R:x(r[1]))+5}" y="${y+rh/2+4}" class="v">${o.fmt(r[1])}</text></g>`; });
+  if(o.target!=null){ const tx=x(o.target); s+=`<line x1="${tx}" x2="${tx}" y1="${T-6}" y2="${H-22}" stroke="${C.ink}" stroke-width="1.5" stroke-dasharray="5 4"/><text x="${tx}" y="${T-10}" text-anchor="middle" class="k">${o.tl}</text>`; }
+  svg(id,W,H,s);
+}
+// Cột đứng (nhóm được): ser = [{n, c (màu hoặc hàm theo giá trị), v:[...]}]
+function vBars(id, cats, ser, o){
+  const W=o.W||520, H=o.H||230, L=44, R=12, T=22, B=28, y=v=>T+(H-T-B)*(1-v/o.max), bw=(W-L-R)/cats.length, gw=bw*.72/ser.length;
+  let s=yAxis(W,L,R,y,o.max,o.step,o.fmt);
+  cats.forEach((c,i)=>{ s+=`<text x="${L+bw*(i+.5)}" y="${H-8}" text-anchor="middle" class="k">${c}</text>`;
+    ser.forEach((se,j)=>{ const v=se.v[i], bx=L+bw*i+bw*.14+gw*j, col=typeof se.c==="function"?se.c(v,i):se.c;
+      s+=`<g><title>${o.tip?o.tip(i):c} · ${se.n}: ${o.fmt(v)}${o.unit||""}</title><rect x="${bx}" y="${y(v)}" width="${gw-2}" height="${y(0)-y(v)}" rx="2" fill="${col}"/><text x="${bx+gw/2-1}" y="${y(v)-4}" text-anchor="middle" class="v">${o.fmt(v)}</text></g>`; }); });
+  if(o.target!=null) s+=refY(W,L,R,y(o.target),o.tl);
+  svg(id,W,H,s);
+}
+
+// ---- Dữ liệu (khớp FACTORY.md và các tab) ----
+const EFF = [80,84,81,78,66,78,82,81,68,62,80,71,63,82,66];                  // hôm qua, TB 74,8%
+const DEF = [2.4,1.8,2.1,2.5,2.4,2.3,1.9,2.4,2.3,3.4,2.7,5.8,3.1,1.6,3.8];      // tuần này, TB 2,7%
+const PL  = [1250,1150,1200,1150,1050,1250,1200,1200,1050,620,1250,900,980,1200,1150]; // kế hoạch/chuyền/ngày, tổng 16.600
+const KH  = {N:"Nordvik Outdoor (Thụy Điển)",B:"Bellmont Apparel (Mỹ)",K:"Kazeyama Sports (Nhật)",C:"Coral Bay Clothing (Úc)",H:"Hanbit Urban (Hàn Quốc)",L:"Northline Wear (Canada)"};
+// 22 đơn: [PO, khách, số lượng, % xong, ngày giao, rủi ro] — 5 nguy cơ trễ, 17 đúng tiến độ (3 cần theo dõi)
+const ORD = [["PO-2602","C",18000,97,"09/11","warn"],["PO-2604","N",28000,94,"10/11","ok"],["PO-2605","K",12000,88,"12/11","ok"],["PO-2607","H",8000,76,"14/11","ok"],
+  ["PO-2611","B",14000,46,"15/11","bad"],["PO-2609","K",16000,81,"16/11","warn"],["PO-2608","L",20000,72,"17/11","ok"],["PO-2610","B",22000,70,"18/11","ok"],
+  ["PO-2614","B",10000,31,"18/11","bad"],["PO-2617","H",9000,52,"19/11","bad"],["PO-2620","B",8000,18,"20/11","bad"],["PO-2612","C",10000,58,"21/11","ok"],
+  ["PO-2623","N",15000,44,"22/11","warn"],["PO-2613","N",32000,55,"24/11","ok"],["PO-2615","L",12000,24,"25/11","bad"],["PO-2616","H",6000,50,"26/11","ok"],
+  ["PO-2618","K",18000,38,"27/11","ok"],["PO-2624","N",24000,20,"28/11","ok"],["PO-2619","B",26000,30,"29/11","ok"],["PO-2622","C",14000,28,"30/11","ok"],
+  ["PO-2625","L",16000,15,"03/12","ok"],["PO-2627","N",10000,5,"05/12","ok"]];
+const RK = {ok:C.ok, warn:C.warn, bad:C.bad};
+const ATT = [941,938,944,936,940,933,939,942,935,930,937,934,929,936,931,927,933,930,925,931,928,924,929,926,921,927,924,919,925,922]; // 30 ngày làm việc, hôm nay 922/980
+const NPL = [["Vải pique navy V-2611",1],["Khóa kéo 18 cm đen",3],["Nhãn dệt Bellmont",3.5],["Chỉ may 40/2 trắng",4],["Mex cổ áo",4],["Nút polo 4 lỗ",4.5],["Thun cạp quần",4.5],["Vải dù áo khoác",6],["Thùng carton",8],["Vải thun cotton",9],["Kaki cotton be",12]];
+
+const CH = {
+  heat:{t:"Sản lượng theo chuyền × ngày (14 ngày)", leg:sq("#86EFAC","≥100% kế hoạch")+sq("#DCFCE7","95–99%")+sq("#FDE68A","85–94%")+sq("#FCA5A5","dưới 85%"), fn:id=>{
+    const FIX = {1:1190,4:690,8:720,9:420,12:690,11:820}; // hôm qua: khớp bảng tab Sản xuất
+    const M = ACT.map((a,d)=>{ const k=PLAN[d]/16600, r=PL.map((p,l)=>{ let q=1+.045*Math.sin(l*7.3+d*3.1);
+        if(d>=11&&[9,12,14].includes(l)) q*=.78; if(d>=12&&[4,8].includes(l)) q*=.72; if(d>=10&&l===11) q*=.9; return p*k*q; });
+      const fx=d===13?FIX:{}, rest=a-Object.values(fx).reduce((x,y)=>x+y,0), free=r.reduce((x,v,l)=>l in fx?x:x+v,0);
+      const row=r.map((v,l)=>l in fx?fx[l]:Math.round(v*rest/free)); row[0]+=a-row.reduce((x,y)=>x+y,0); return row; });
+    const W=800, L=78, R=6, T=24, cw=(W-L-R)/14, ch=22, H=T+15*ch+6;
+    let s=ACT.map((_,d)=>`<text x="${L+cw*(d+.5)}" y="${T-8}" text-anchor="middle">${dl(d)}</text>`).join("");
+    PL.forEach((p,l)=>{ s+=`<text x="${L-8}" y="${T+l*ch+ch/2+4}" text-anchor="end" class="k">Chuyền ${pad(l+1)}</text>`;
+      ACT.forEach((_,d)=>{ const v=M[d][l], pr=v/(p*PLAN[d]/16600)*100, c=pr>=100?"#86EFAC":pr>=95?"#DCFCE7":pr>=85?"#FDE68A":"#FCA5A5";
+        s+=`<g><title>Chuyền ${pad(l+1)} · ${dl(d)}: ${f(v)} sp (${Math.round(pr)}% kế hoạch)</title><rect x="${L+cw*d+1}" y="${T+l*ch+1}" width="${cw-2}" height="${ch-2}" rx="3" fill="${c}"/><text x="${L+cw*(d+.5)}" y="${T+l*ch+ch/2+4}" text-anchor="middle" class="hc">${f(v)}</text></g>`; }); });
+    s+=`<line x1="4" x2="${W-R}" y1="${T+8*ch}" y2="${T+8*ch}" stroke="${C.ink}" stroke-width="1.5"/>`;
+    svg(id,W,H,s); }},
+  eff:{t:"Hiệu suất theo chuyền (hôm qua)", leg:sq(C.ok,"≥75%")+sq(C.warn,"70–74%")+sq(C.bad,"dưới 70%")+ds("Mục tiêu 75%"), fn:id=>
+    hBars(id, EFF.map((v,i)=>[`Chuyền ${pad(i+1)}`, v, v>=75?C.ok:v>=70?C.warn:C.bad, `Chuyền ${pad(i+1)} (Xưởng ${i<8?1:2}): ${v}%`]), {max:100, step:20, fmt:pct, target:75, tl:"Mục tiêu 75%", rh:22})},
+  ot:{t:"Tăng ca tuần này so với giới hạn luật", leg:sq(C.ok,"An toàn")+sq(C.warn,"Cần theo dõi")+sq(C.bad,"Sát giới hạn")+ds("Giới hạn ~9,2 giờ/người/tuần"), fn:id=>
+    hBars(id, [["Xưởng 1",2700,360],["Xưởng 2",1550,315],["Xưởng cắt",480,55],["Hoàn thiện",670,110]].map(r=>{ const a=Math.round(r[1]/r[2]*10)/10; return [r[0], a, a>=8.5?C.bad:a>=7?C.warn:C.ok, `${r[0]}: ${f(r[1])} giờ · ${r[2]} người · ${d1(a)} giờ/người`]; }),
+      {max:12, step:3, fmt:v=>d1(v)+" giờ", target:40/4.33, tl:"Giới hạn 40 giờ/tháng", L:80, rh:40})},
+  def:{t:"Tỷ lệ lỗi theo chuyền (tuần này)", leg:sq(C.ok,"dưới 3%")+sq(C.warn,"3–5%")+sq(C.bad,"trên 5%")+ds("Mục tiêu 3%"), fn:id=>
+    vBars(id, EFF.map((_,i)=>pad(i+1)), [{n:"Tỷ lệ lỗi", c:v=>v>=5?C.bad:v>=3?C.warn:C.ok, v:DEF}], {max:7, step:1, fmt:d1, unit:"%", target:3, tl:"Mục tiêu 3%", tip:i=>"Chuyền "+pad(i+1)})},
+  par:{t:"Lỗi theo loại – Pareto (tuần này)", leg:sq(C.p,"Số lỗi")+`<span><i style="background:${C.ink}"></i>% cộng dồn</span>`, fn:id=>{
+    const D=[["Đường may không đều","Đường may",552],["Lệch cổ","Lệch cổ",370],["Bẩn, dính dầu","Bẩn/dầu",255],["Bỏ mũi, sùi chỉ","Bỏ mũi",228],["Sai thông số","Thông số",140],["Khác","Khác",185]];
+    const tot=D.reduce((a,d)=>a+d[2],0), W=520, H=240, L=44, R=42, T=22, B=28, y=v=>T+(H-T-B)*(1-v/600), yp=p=>T+(H-T-B)*(1-p/100), bw=(W-L-R)/D.length;
+    let s=yAxis(W,L,R,y,600,150,f), cum=0, pts=[];
+    for(let p=0;p<=100;p+=25) s+=`<text x="${W-R+6}" y="${yp(p)+4}">${p}%</text>`;
+    s+=`<line x1="${L}" x2="${W-R}" y1="${yp(80)}" y2="${yp(80)}" stroke="${C.g}" stroke-dasharray="4 4"/><text x="${L+4}" y="${yp(80)-4}" class="k">80%</text>`;
+    D.forEach((d,i)=>{ cum+=d[2]; const cx=L+bw*(i+.5); pts.push([cx, yp(cum/tot*100), cum/tot*100]);
+      s+=`<g><title>${d[0]}: ${f(d[2])} lỗi (${d1(d[2]/tot*100)}%)</title><rect x="${cx-bw*.32}" y="${y(d[2])}" width="${bw*.64}" height="${y(0)-y(d[2])}" rx="2" fill="${C.p}"/><text x="${cx}" y="${y(d[2])-4}" text-anchor="middle" class="v">${f(d[2])}</text></g><text x="${cx}" y="${H-8}" text-anchor="middle" class="k">${d[1]}</text>`; });
+    s+=`<polyline points="${pts.map(p=>p[0]+","+p[1]).join(" ")}" fill="none" stroke="${C.ink}" stroke-width="2"/>`+pts.map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="4" fill="#fff" stroke="${C.ink}" stroke-width="2"><title>Cộng dồn ${d1(p[2])}%</title></circle>`).join("");
+    svg(id,W,H,s); }},
+  ord:{t:"Tiến độ 22 đơn theo ngày giao", leg:sq(C.ok,"Đúng tiến độ (14)")+sq(C.warn,"Cần theo dõi (3)")+sq(C.bad,"Nguy cơ trễ (5)"), fn:id=>
+    hBars(id, ORD.map(o=>[`${o[0]} · ${o[4]}`, o[3], RK[o[5]], `${o[0]} · ${KH[o[1]]} · ${f(o[2])} sp · giao ${o[4]}: xong ${o[3]}% (${{ok:"đúng tiến độ",warn:"cần theo dõi",bad:"nguy cơ trễ"}[o[5]]})`]), {max:100, step:25, fmt:pct, L:118, rh:20, track:1})},
+  cus:{t:"Đơn đang chạy theo khách hàng", leg:`<span>Theo số lượng đặt</span>`, fn:id=>{
+    const COL=[C.p,"#60A5FA","#14B8A6","#8B5CF6","#F472B6","#94A3B8"];
+    const K=Object.keys(KH).map(k=>[KH[k], ...ORD.filter(o=>o[1]===k).reduce((a,o)=>[a[0]+o[2],a[1]+1],[0,0])]).sort((a,b)=>b[1]-a[1]);
+    const tot=K.reduce((a,k)=>a+k[1],0), R=60, CI=2*Math.PI*R; let off=0, s="";
+    K.forEach((k,i)=>{ const len=k[1]/tot*CI; s+=`<circle cx="80" cy="80" r="${R}" fill="none" stroke="${COL[i]}" stroke-width="28" stroke-dasharray="${len-2} ${CI-len+2}" stroke-dashoffset="${-off}" transform="rotate(-90 80 80)"><title>${k[0]}: ${f(k[1])} sp · ${k[2]} đơn</title></circle>`; off+=len; });
+    s+=`<text x="80" y="80" text-anchor="middle" class="v" style="font-size:17px">${f(tot)}</text><text x="80" y="97" text-anchor="middle">sp · ${ORD.length} đơn</text>`;
+    $(id).innerHTML=`<div class="dn"><svg viewBox="0 0 160 160">${s}</svg><ul>${K.map((k,i)=>`<li><i style="background:${COL[i]}"></i><span>${k[0]}</span><b class="num">${d1(k[1]/tot*100)}%</b><span class="muted">${f(k[1])} sp · ${k[2]} đơn</span></li>`).join("")}</ul></div>`; }},
+  npl:{t:"Tồn kho NPL: số ngày đủ sản xuất", leg:sq(C.bad,"dưới 5 ngày (7 loại)")+sq(C.warn,"5–7 ngày")+sq(C.ok,"đủ")+ds("Ngưỡng an toàn 5 ngày"), fn:id=>
+    hBars(id, NPL.map(n=>[n[0], n[1], n[1]<5?C.bad:n[1]<7?C.warn:C.ok]), {max:15, step:5, fmt:v=>d1(v)+" ngày", target:5, tl:"Ngưỡng 5 ngày", L:150, rh:22})},
+  att:{t:"Công nhân đi làm 30 ngày làm việc", leg:`<span><i style="background:${C.p}"></i>Số người đi làm</span>`+ds("Mục tiêu 95%"), fn:id=>{
+    const D=[]; for(let d=new Date(2026,10,6); D.length<30; d.setDate(d.getDate()-1)) if(d.getDay()) D.unshift(`${pad(d.getDate())}/${pad(d.getMonth()+1)}`); // bỏ Chủ nhật
+    const W=520, H=230, L=44, R=12, T=22, B=28, min=880, max=980, x=i=>L+i*(W-L-R)/29, y=v=>T+(H-T-B)*(1-(v-min)/(max-min));
+    let s=yAxis(W,L,R,y,max,20,f,min)+D.map((t,i)=>(29-i)%6?"":`<text x="${x(i)}" y="${H-8}" text-anchor="middle">${t}</text>`).join("")+refY(W,L,R,y(931),"Mục tiêu 95% (931)");
+    s+=`<polyline points="${ATT.map((v,i)=>x(i)+","+y(v)).join(" ")}" fill="none" stroke="${C.p}" stroke-width="2.5"/>`;
+    s+=ATT.map((v,i)=>`<circle cx="${x(i)}" cy="${y(v)}" r="${i===29?5:3}" fill="${v<931?C.bad:C.p}"><title>${D[i]}: ${f(v)}/980 người (${d1(v/9.8)}%)</title></circle>`).join("");
+    s+=`<text x="${x(29)}" y="${y(ATT[29])+20}" text-anchor="end" class="v">Hôm nay ${f(ATT[29])}/980</text>`;
+    svg(id,W,H,s); }},
+  hr:{t:"Tuyển mới và nghỉ việc 6 tháng", leg:sq(C.ok,"Vào làm")+sq(C.bad,"Nghỉ việc"), fn:id=>
+    vBars(id, ["T6","T7","T8","T9","T10","T11*"], [{n:"Vào làm",c:C.ok,v:[52,48,66,45,50,8]},{n:"Nghỉ việc",c:C.bad,v:[36,41,38,44,58,5]}], {max:70, step:10, fmt:f, unit:" người", tip:i=>i===5?"T11 (6 ngày đầu)":"Tháng "+(i+6)})},
+  rev:{t:"Doanh thu xuất hàng 6 tháng & dự báo 4 tháng (tỷ đồng)", leg:sq(C.p,"Thực tế")+sq("#93C5FD","Dự báo (theo đơn đã nhận + mùa vụ)")+ds("Kế hoạch 42 tỷ/tháng"), fn:id=>{
+    const M=["T5","T6","T7","T8","T9","T10","T11","T12","T1/27","T2/27"], F=6; // từ T11 là dự báo
+    vBars(id, M, [{n:"Doanh thu",c:(v,i)=>i<F?C.p:"#93C5FD",v:[41.2,43.8,39.5,44.6,42.1,40.3,43.5,47.8,36.2,31.4]}], {max:50, step:10, fmt:d1, unit:" tỷ đồng", target:42, tl:"Kế hoạch 42 tỷ", tip:i=>(i<F?"Thực tế ":"Dự báo ")+M[i]});
+    const g=document.getElementById(id)?.querySelector("svg"); if(g) g.insertAdjacentHTML("beforeend",`<text x="${44+(520-56)/10*6}" y="16" class="k" style="font-size:10px">◂ Thực tế | Dự báo ▸</text><line x1="${44+(520-56)/10*6}" x2="${44+(520-56)/10*6}" y1="20" y2="202" stroke="#9CA3AF" stroke-dasharray="3 3"/>`);
+  }},
+};
+document.querySelectorAll("[data-ch]").forEach((el,i)=>{ const c=CH[el.dataset.ch];
+  el.innerHTML=`<div class="card-h"><h3>${c.t}</h3><div class="r leg">${c.leg}</div></div><div class="card-b" id="ch${i}"></div>`; c.fn("ch"+i); });
+
+// Đơn hàng, sản xuất, nhân sự
+const ST = {ok:["Đúng tiến độ","b-ok"],warn:["Cần theo dõi","b-warn"],bad:["Nguy cơ trễ","b-bad"]};
+$("orders").innerHTML = [["PO-2611","Bellmont Apparel (Mỹ)","AO-POLO-2611",14000,46,"15/11","bad"],["PO-2614","Bellmont Apparel (Mỹ)","AO-POLO-2611",10000,31,"18/11","bad"],["PO-2620","Bellmont Apparel (Mỹ)","AO-THUN-2402",8000,18,"20/11","bad"],["PO-2617","Hanbit Urban (Hàn Quốc)","AO-KHOAC-1150",9000,52,"19/11","bad"],["PO-2615","Northline Wear (Canada)","AO-KHOAC-1150",12000,24,"25/11","bad"],["PO-2609","Kazeyama Sports (Nhật)","QUAN-KAKI-0932",16000,81,"16/11","warn"],["PO-2623","Nordvik Outdoor (Thụy Điển)","SOMI-NU-1210",15000,44,"22/11","warn"],["PO-2604","Nordvik Outdoor (Thụy Điển)","QUAN-KAKI-0932",28000,94,"10/11","ok"]]
+  .map(o=>`<tr><td><b>${o[0]}</b></td><td>${o[1]}</td><td>${o[2]}</td><td class="right num">${f(o[3])}</td><td><div style="display:flex;gap:8px;align-items:center"><div class="bar ${o[6]==="bad"?"bad":o[6]==="warn"?"warn":"ok"}" style="width:100px"><i style="width:${o[4]}%"></i></div>${o[4]}%</div></td><td>${o[5]}</td><td><span class="badge ${ST[o[6]][1]}">${ST[o[6]][0]}</span></td></tr>`).join("");
+$("lines").innerHTML = [["Chuyền 02","AO-THUN-2402",1150,1190,""],["Chuyền 05","AO-POLO-2611",1050,690,"Chờ hàng cắt 3,5 giờ"],["Chuyền 09","AO-POLO-2611",1050,720,"Chờ hàng cắt"],["Chuyền 10","AO-KHOAC-1150",620,420,"Thiếu 8 người"],["Chuyền 13","SOMI-NU-1210",980,690,"Thiếu 7 người"],["Chuyền 12","QUAN-KAKI-0932",900,820,"Lỗi 5,8%"]]
+  .map(l=>{const p=Math.round(l[3]/l[2]*100);return `<tr><td>${l[0]}</td><td>${l[1]}</td><td class="right num">${f(l[2])}</td><td class="right num">${f(l[3])}</td><td><span class="badge ${p>=95?"b-ok":p>=85?"b-warn":"b-bad"}">${p}%</span></td><td class="muted">${l[4]}</td></tr>`}).join("");
+$("att").innerHTML = hbar([["Xưởng 1",96],["Xưởng 2",89],["Cắt",94],["Hoàn thiện",93],["Kho NPL",97],["QA",96]], v=>v>=95?"ok":v>=90?"warn":"bad", v=>v+"%", 1);
+
+// Hỏi nhanh
+const QA = {
+  "Tuần này đơn nào có nguy cơ trễ?":"Có <b>5 đơn</b>: 3 đơn của Bellmont Apparel (Mỹ) (<b>PO-2611, 2614, 2620</b>) vì vải lô V-2611 về trễ, ~1,1 tỷ đồng; <b>PO-2617</b> vì Xưởng 2 thiếu người; <b>PO-2615</b> vì thiếu khóa kéo.",
+  "Công đoạn nào đang nghẽn?":"<b>Xưởng cắt</b>: chạy 98% công suất, hàng chờ cắt 1,8 ngày do thiếu vải. Chuyền 05 và 09 chờ hàng cắt 3,5 giờ hôm qua.",
+  "Nguyên liệu nào sắp hết?":"7 loại dưới 5 ngày dùng, gấp nhất: vải pique lô V-2611 (1 ngày), khóa kéo 18 cm (3 ngày, <b>chưa đặt đủ</b>), chỉ 40/2 trắng và mex cổ áo (4 ngày).",
+  "Tháng này nghỉ việc bao nhiêu người?":"Tháng 10 có <b>58 người nghỉ việc</b> (5,9%), cao hơn tháng 9 (44 người). Riêng Xưởng 2 chiếm 21 người.",
+};
+$("chips").innerHTML = Object.keys(QA).map(k=>`<button class="chip">${k}</button>`).join("");
+$("chips").onclick = e => { if(e.target.classList.contains("chip")) ask(e.target.textContent); };
+function ask(t){
+  t = t.trim(); if(!t) return; $("q").value = t;
+  $("ans").innerHTML = QA[t] || "Bản demo chỉ trả lời các câu hỏi mẫu. Hãy bấm một câu bên trên.";
+  $("ans").style.display = "block";
+}
+
+document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{
+  document.querySelectorAll(".tab,.view").forEach(e=>e.classList.remove("on"));
+  t.classList.add("on"); $(t.dataset.v).classList.add("on");
+});
+</script>
+</body>
+</html>
